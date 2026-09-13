@@ -9,7 +9,6 @@
   <p><a href="{% url 'web:groups' %}?{{ range_query }}">← Groups</a></p>
   {% include "web/_period.html" %}
 
-  <h2>{{ group.name }}</h2>
   <p class="period muted">{{ group.products.count }} product{{ group.products.count|pluralize }} in this group.</p>
 
   <div class="cards">

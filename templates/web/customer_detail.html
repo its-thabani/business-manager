@@ -7,7 +7,6 @@
   <p class="period"><a href="{% url 'web:customers' %}?{{ range_query }}{% if not hide_free %}&amp;hide_free=0{% endif %}">← Customers</a></p>
   {% include "web/_period.html" %}
 
-  <h2>{{ customer }}</h2>
   <p class="muted">
     {{ customer.email|default:"No email" }}
     {% if customer.country %} · {{ customer.country }}{% endif %}

@@ -26,6 +26,8 @@ coverage.xml
 
 # Local scratch / one-off analysis
 /scratch/
+/logs
+logs
 
 # Uploaded source data (contains real financial records)
 /files/

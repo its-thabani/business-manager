@@ -13,7 +13,9 @@ Those two are related, but they are not the same number. A sale is booked on the
 
 ## Sign in
 
-Open the website you were given.
+Open [https://staylit-business-manager.onrender.com](https://staylit-business-manager.onrender.com).
+
+The first click after a quiet spell can take a minute. The free host goes to sleep; that is normal, not a broken login.
 
 - **Username:** `laura`
 - **First password:** `1234`
@@ -111,6 +113,8 @@ This is the only place you need for monthly updates:
 ### Insights
 
 Numbered findings from figures the rest of the app already calculated. Nothing here is a forecast. Download the list if you want to keep it or drop it into another tool.
+
+The list is rebuilt every time you open the page or change the dates. There is no overnight job. After you upload a new Monzo file or run **Update Shopify** / **Update Inkthreadable** on Data health, come back here and the wording will follow the new numbers.
 
 ### Products, Groups, Orders
 

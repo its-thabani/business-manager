@@ -269,7 +269,14 @@ class ImportBatch(TimeStampedModel):
         verbose_name_plural = "import batches"
 
     def __str__(self) -> str:
-        return f"{self.get_source_display()} — {self.filename or self.created_at:%Y-%m-%d %H:%M}"
+        # The format spec applies to the whole `or` expression. A filename
+        # is a string, so `{filename or created_at:%Y-%m-%d}` crashed Admin
+        # whenever a batch had a file name (the common case after a CSV import).
+        label = (self.filename or "").strip()
+        if not label:
+            when = self.created_at
+            label = when.strftime("%Y-%m-%d %H:%M") if hasattr(when, "strftime") else str(when)
+        return f"{self.get_source_display()} — {label}"
 
 
 class IssueSeverity(models.TextChoices):

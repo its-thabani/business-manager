@@ -311,18 +311,69 @@ taken from order line items (`pn`, `price`, size/colour options).
 
 ---
 
-## Deployment to Render
+## Hosted production (Render + Neon)
 
-`render.yaml` defines a web service and a managed Postgres database.
+This is the live setup as of September 2026. Do not point a new deploy at an
+empty database and resync Shopify / Inkthreadable unless you intend to replace
+the books.
 
-1. Push the repository to GitHub.
-2. In Render, create a **Blueprint** from the repository.
-3. Set the secret environment variables in the dashboard (never in `render.yaml`):
-   `SHOPIFY_ACCESS_TOKEN`, `SHOPIFY_CLIENT_SECRET`, `INKTHREADABLE_SECRET_KEY`.
-4. Deploy. `build.sh` installs dependencies, collects static files and migrates.
+| Piece | Where |
+| --- | --- |
+| App | [https://staylit-business-manager.onrender.com](https://staylit-business-manager.onrender.com) |
+| Code | [https://github.com/its-thabani/business-manager](https://github.com/its-thabani/business-manager) |
+| Web host | Render — service `staylit-business-manager`, **Free** plan, Frankfurt |
+| Database | Neon Postgres — project `staylit-business-manager`, AWS `eu-west-2` (London). Not Render Postgres. |
+| Operator login | Username `laura`. First password from `OPERATOR_PASSWORD` (default `1234` only if that user was created empty). Existing passwords are never reset on deploy. |
 
-`DATABASE_URL` and `DJANGO_SECRET_KEY` are wired up by Render automatically. With
-`DJANGO_DEBUG=False` the app enforces HTTPS, HSTS and secure cookies.
+The live books were copied from the original laptop SQLite file into Neon
+(`dumpdata` / `loaddata`). They are the source of truth. Local `db.sqlite3` is
+for development only and will drift once Laura uses the hosted site.
+
+Free Render sleeps after about 15 minutes idle. Free Neon also scales to zero.
+The first request after a break can take a minute. That is the host, not a
+failed deploy.
+
+`order_number` is a `BigIntegerField` because Shopify ids do not fit in a
+32-bit Postgres `integer`. SQLite hid that; do not revert the column.
+
+### Environment variables on Render
+
+Set these on the web service (never commit them). `DATABASE_URL` must be the
+Neon **direct** connection string (no `-pooler` in the hostname).
+
+| Key | Notes |
+| --- | --- |
+| `DATABASE_URL` | Neon URI with `sslmode=require` |
+| `DJANGO_SECRET_KEY` | Generated on Render |
+| `DJANGO_DEBUG` | `False` |
+| `PYTHON_VERSION` | `3.13.0` |
+| `SHOPIFY_STORE` | `scctj4-i8.myshopify.com` |
+| `SHOPIFY_API_VERSION` | `2025-01` |
+| `SHOPIFY_CLIENT_ID` / `SHOPIFY_CLIENT_SECRET` / `SHOPIFY_ACCESS_TOKEN` | From the local `.env` |
+| `INKTHREADABLE_APP_ID` | `APP-00146434` |
+| `INKTHREADABLE_SECRET_KEY` | From the local `.env` |
+| `INKTHREADABLE_BASE_URL` | `https://www.inkthreadable.co.uk/api` |
+| `INKTHREADABLE_AUTH_STYLE` | `query` |
+| `OPERATOR_PASSWORD` | Only used if `laura` does not already exist |
+
+`build.sh` runs `migrate`, `seed_finance` and `bootstrap_operator`. Seed is
+idempotent. Bootstrap does not overwrite Laura’s password.
+
+### Deploying a code change
+
+The GitHub App listing did not see this private repo, so the service was
+connected as a **public Git repository**. That path does **not** auto-deploy
+on `git push`.
+
+1. Commit and push to `main` on GitHub.
+2. In Render → `staylit-business-manager` → **Manual Deploy** → **Deploy latest commit**.
+
+If the GitHub App later lists the repo, you can reconnect it and turn
+auto-deploys on. Do not create a second web service.
+
+Do not add a Render Postgres. Keep using the existing Neon `DATABASE_URL`.
+
+With `DJANGO_DEBUG=False` the app enforces HTTPS, HSTS and secure cookies.
 
 ---
 
@@ -346,7 +397,7 @@ Each stage is built, tested and verified before the next begins.
 15. ~~Product groups — hoodies, tees, sweatshirts from titles~~ ✅
 16. ~~Data health page~~ ✅
 17. ~~CSV downloads of tables (instead of an in-app AI)~~ ✅
-18. Render deployment
+18. ~~Render deployment~~ ✅ — live on Render + Neon (see above)
 
 ---
 

@@ -173,3 +173,17 @@ class TestMalformedInput:
         path.write_text("\ufeff" + HEADER + ROWS[0] + "\n", encoding="utf-8")
         import_monzo_csv(path, account=account)
         assert BankTransaction.objects.get().external_id == "mm_0000B9BkWNnhkmODkzu41Z"
+
+
+@pytest.mark.django_db
+def test_import_batch_str_includes_filename_without_crashing(account):
+    from apps.finance.models import ImportBatch, TransactionSource
+
+    batch = ImportBatch.objects.create(
+        source=TransactionSource.MONZO_CSV,
+        account=account,
+        filename="Monzo Data Export - August 2026.csv",
+    )
+    text = str(batch)
+    assert "Monzo" in text
+    assert "August 2026" in text

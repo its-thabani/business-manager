@@ -29,6 +29,8 @@
                    border-bottom:2px solid transparent; margin-bottom:-1px; }
     .nav-pages a.on { color:var(--ink); border-bottom-color:var(--accent); font-weight:600; }
     .nav-pages a:hover { color:var(--ink); }
+    .page-heading { font-size:1.35rem; font-weight:650; letter-spacing:-.02em;
+                    margin:1.25rem 0 0; }
     .filters { display:flex; flex-wrap:wrap; gap:.35rem; margin:1rem 0 0; }
     .filters a { padding:.2rem .6rem; border-radius:999px; background:#fff;
                  text-decoration:none; color:var(--muted); font-size:.78rem;
@@ -185,6 +187,10 @@
       <a class="{% if nav == 'blanks' %}on{% endif %}" href="/mapping/blanks/">Blanks</a>
     </nav>
   </div>
+  {% endif %}
+
+  {% if nav %}
+  <h2 class="page-heading">{% block subtitle %}{% endblock %}</h2>
   {% endif %}
 
   {% if messages %}

@@ -1,6 +1,7 @@
 {% extends "web/base.html" %}
 {% load humanize %}
 
+{% block title %}{{ product.title }} — StayLit Apparel{% endblock %}
 {% block subtitle %}
   {{ product.title }} · {{ date_range.label }}
 {% endblock %}

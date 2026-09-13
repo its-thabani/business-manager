@@ -158,6 +158,8 @@ def test_product_detail_shows_size_mix(client, make_product, map_variant, make_o
     response = client.get(f"/products/{product.pk}/?range=all")
 
     assert response.status_code == 200
+    assert b"Classic Tee" in response.content
+    assert b"<h2 class=\"page-heading\">" in response.content
     assert b"Size mix" in response.content
     assert b">L<" in response.content or b"L" in response.content
 
