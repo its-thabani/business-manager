@@ -137,7 +137,10 @@ class Order(TimeStampedModel):
         db_index=True,
         help_text="The order name as shown to the customer, e.g. '#1042'",
     )
-    order_number = models.IntegerField(null=True, blank=True, db_index=True)
+    # Shopify's numeric id is 64-bit (e.g. 12026310427001). Postgres integer
+    # is 32-bit and rejects those values; SQLite does not, so this only
+    # surfaced when loading the books into Neon.
+    order_number = models.BigIntegerField(null=True, blank=True, db_index=True)
 
     customer = models.ForeignKey(
         Customer,
