@@ -322,13 +322,21 @@ def _cost_coverage(rows, shop, range_key):
             )
         )
         return
+    extra = ""
+    if shop.is_estimate and shop.known_margin_pct is not None:
+        extra = (
+            f" On the lines that do have a cost, margin is {shop.known_margin_pct:.1f}%, "
+            f"which would be about {fmt(shop.estimated_profit)} if the rest were similar. "
+            "That is an estimate, not the books."
+        )
     rows.append(
         Insight(
-            title="Shop profit is withheld until mappings are finished",
+            title="Shop profit is incomplete until mappings are finished",
             body=(
                 f"{shop.lines_missing_cost} of {shop.lines_total} sold lines have no cost "
                 f"({shop.completeness_pct:.0f}% coverage). Shopify does not store Inkthreadable "
-                f"print cost unless Cost per item was entered. Profit stays — rather than a guess."
+                f"print cost unless Cost per item was entered."
+                f"{extra} Map variants or enter Cost per item to lock the real figure."
             ),
             tone="gap",
             href="/mapping/",

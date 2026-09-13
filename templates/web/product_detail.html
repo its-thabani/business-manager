@@ -40,28 +40,15 @@
         {% endif %}
       </div>
     </div>
-    <div class="card">
-      <div class="label">Contribution profit</div>
-      <div class="value {% if not performance.is_complete %}warn{% elif performance.profit < 0 %}neg{% else %}pos{% endif %}">
-        {% if performance.is_complete %}£{{ performance.profit|floatformat:2 }}{% else %}—{% endif %}
-      </div>
-      <div class="period">
-        {% if performance.is_complete and performance.margin_pct is not None %}
-          {{ performance.margin_pct|floatformat:1 }}% margin
-        {% elif performance.lines_missing_cost %}
-          {{ performance.lines_missing_cost }} line{{ performance.lines_missing_cost|pluralize }} without cost
-        {% endif %}
-        {% if vs_previous.profit_pct is not None %}
-          · <span class="delta {% if vs_previous.profit_pct < 0 %}neg{% else %}pos{% endif %}">{{ vs_previous.profit_pct|floatformat:0 }}% vs previous</span>
-        {% endif %}
-      </div>
-    </div>
+    {% include "web/_profit_card.html" %}
     <div class="card">
       <div class="label">Refund rate</div>
       <div class="value">{% if performance.refund_rate_pct is not None %}{{ performance.refund_rate_pct|floatformat:1 }}%{% else %}—{% endif %}</div>
       <div class="period">of units sold</div>
     </div>
   </div>
+
+  {% include "web/_cost_hint.html" %}
 
   <div class="charts two">
     <div class="chart">
@@ -123,8 +110,8 @@
           <td>{{ row.label }}</td>
           <td class="num">{{ row.units|intcomma }}</td>
           <td class="num">£{{ row.net_revenue|floatformat:2 }}</td>
-          <td class="num">{% if row.is_complete %}£{{ row.profit|floatformat:2 }}{% else %}—{% endif %}</td>
-          <td class="num">{% if row.is_complete and row.margin_pct is not None %}{{ row.margin_pct|floatformat:1 }}%{% else %}—{% endif %}</td>
+          <td class="num">{% include "web/_profit_cell.html" with mapping_id=product.pk %}</td>
+          <td class="num">{% include "web/_margin_cell.html" with mapping_id=product.pk %}</td>
         </tr>
       {% empty %}
         <tr><td colspan="5" class="muted">Nothing sold in this period.</td></tr>

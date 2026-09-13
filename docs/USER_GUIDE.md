@@ -228,7 +228,7 @@ Typical lines (only those the data can support for the dates you picked):
 - Discounts given away.
 - Refunds in the period.
 - Best seller and concentration in a few products.
-- Whether shop profit is withheld because mappings are unfinished.
+- Whether shop profit is incomplete, and an estimate from the lines that have a cost.
 - Stripe in vs Inkthreadable out.
 - Repeat buyers.
 - How many Shopify days are matched to Stripe.
@@ -266,10 +266,14 @@ There is no overnight job and no extra refresh button. After you import a bank f
 **What it can tell you**
 
 - What is actually selling in this window.
-- Which lines have no cost yet (profit stays **—**).
+- Which lines have no cost yet.
 - Whether a best seller is profitable once the printer is paid.
 
-Profit stays **—** until every sold line has a cost. That usually means the Shopify order is linked to its Inkthreadable fulfilment, **or** the variant is mapped (or has a Shopify Cost per item).
+A **green or red** profit with a complete pill is the real total — every sold line has a cost. A **~** figure labelled **approx.** (dashed card) is the margin of the items that already have a cost, applied to the rest. That is not the books.
+
+A product or variant still showing **—** has no cost of its own. Click **add cost** to open Mapping for that product. Do not read a group approximation as that line’s profit.
+
+To replace an approximation with a real total: map the variant on **Mapping**, run **Link supplier orders** on Data health, or enter **Cost per item** on the Shopify variant.
 
 ---
 
@@ -291,7 +295,7 @@ Profit stays **—** until every sold line has a cost. That usually means the Sh
 
 - Whether XS is the size that sells.
 - Whether a colour is returning more than others.
-- Whether this hoodie is carrying profit or sitting on **—**.
+- Whether this hoodie is carrying a complete profit, an **approx.** total, or still **—**.
 
 ---
 
@@ -303,11 +307,13 @@ Profit stays **—** until every sold line has a cost. That usually means the Sh
 
 - The same style of totals as Products, per group.
 - A table of groups; click through for the products in that group.
+- **~ approx.** profit / margin when only some items in the group have a printer cost. Complete groups stay green or red.
 
 **What it can tell you**
 
 - Which garment family is carrying the shop.
-- Whether hoodies have better margin than tees once costs are known.
+- A rough tee vs hoodie margin before every mapping is finished (labelled estimate).
+- Where to add a cost so the estimate becomes a real total (Mapping, Data health, or Shopify Cost per item).
 
 ---
 

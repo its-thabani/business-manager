@@ -1,0 +1,9 @@
+{% if row.product_id %}
+  <a class="dash-link" href="{% url 'web:mapping_detail' row.product_id %}" title="No printer cost on this line. Open Mapping to add one.">—</a>
+  <span class="est-note"><a href="{% url 'web:mapping_detail' row.product_id %}">add cost</a></span>
+{% elif mapping_id %}
+  <a class="dash-link" href="{% url 'web:mapping_detail' mapping_id %}" title="No printer cost on this line. Open Mapping to add one.">—</a>
+  <span class="est-note"><a href="{% url 'web:mapping_detail' mapping_id %}">add cost</a></span>
+{% else %}
+  —
+{% endif %}

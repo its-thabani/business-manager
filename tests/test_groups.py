@@ -10,6 +10,7 @@ import pytest
 from apps.analytics.groups import ensure_default_groups
 from apps.analytics.profitability import compute_order_profits, group_performance
 from apps.catalog.models import ProductGroup
+from apps.core.money import quantise
 from apps.core.periods import DateRange
 
 pytestmark = pytest.mark.django_db
@@ -53,3 +54,32 @@ def test_group_performance_adds_member_sales(make_product, make_order):
     assert row.units == 1
     assert row.net_revenue == Decimal("34.99")
     assert row.group_id == hoodies.pk
+
+
+def test_group_estimates_profit_from_the_lines_that_have_a_cost(
+    make_product, map_variant, make_order
+):
+    known = make_product(title="Ask Me About Jesus Hoodie", product_type="")
+    map_variant(known.variants.get(), cost="10.00")
+    make_order(
+        lines=[(known.variants.get(), 1, "40.00")],
+        shipping_charged="0.00",
+        payment_fee="1.00",
+    )
+    unknown = make_product(title="Other Faith Hoodie", product_type="")
+    make_order(
+        lines=[(unknown.variants.get(), 1, "40.00")],
+        shipping_charged="0.00",
+        payment_fee="1.00",
+    )
+    ensure_default_groups()
+    hoodies = ProductGroup.objects.get(slug="hoodies")
+
+    row = group_performance(compute_order_profits(JUNE), hoodies, date_range=JUNE)
+
+    assert row.units == 2
+    assert not row.is_complete
+    assert row.known_units == 1
+    assert row.is_estimate
+    rate = row.known_profit / row.known_net_revenue
+    assert row.estimated_profit == quantise(row.net_revenue * rate)

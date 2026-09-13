@@ -553,7 +553,16 @@ def products(request):
     if wants_csv(request):
         return csv_response(
             "products.csv",
-            ["Product", "Orders", "Units", "Net sales", "Profit", "Margin %", "Cost coverage"],
+            [
+                "Product",
+                "Orders",
+                "Units",
+                "Net sales",
+                "Profit",
+                "Margin %",
+                "Basis",
+                "Cost coverage",
+            ],
             [
                 [
                     row.label,
@@ -562,6 +571,7 @@ def products(request):
                     money_cell(row.net_revenue),
                     money_cell(row.profit) if row.is_complete else "",
                     row.margin_pct if row.is_complete else "",
+                    row.profit_basis,
                     row.completeness_pct,
                 ]
                 for row in ranked
@@ -654,7 +664,7 @@ def groups(request):
     members = {group.pk: group.products.count() for group in ProductGroup.objects.all()}
     for row in group_rows:
         row.members = members.get(row.group_id, 0)
-    ranked = rank_products(group_rows, sort=sort)
+    ranked = rank_products(group_rows, sort=sort, use_estimate=True)
     if hide_free:
         ranked = [row for row in ranked if not row.is_free]
     extras = f"sort={sort}"
@@ -663,15 +673,16 @@ def groups(request):
     if wants_csv(request):
         return csv_response(
             "groups.csv",
-            ["Group", "Orders", "Units", "Net sales", "Profit", "Margin %"],
+            ["Group", "Orders", "Units", "Net sales", "Profit", "Margin %", "Basis"],
             [
                 [
                     row.label,
                     row.orders,
                     row.units,
                     money_cell(row.net_revenue),
-                    money_cell(row.profit) if row.is_complete else "",
-                    row.margin_pct if row.is_complete else "",
+                    money_cell(row.displayed_profit) if row.displayed_profit is not None else "",
+                    row.displayed_margin_pct if row.displayed_margin_pct is not None else "",
+                    row.profit_basis,
                 ]
                 for row in ranked
             ],

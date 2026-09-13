@@ -20,19 +20,7 @@
       <div class="value">£{{ shop.net_revenue|floatformat:2 }}</div>
       <div class="period">Shopify, after discounts and refunds</div>
     </div>
-    <div class="card">
-      <div class="label">Contribution profit</div>
-      <div class="value {% if not shop.is_complete %}warn{% elif shop.profit < 0 %}neg{% else %}pos{% endif %}">
-        {% if shop.is_complete %}£{{ shop.profit|floatformat:2 }}{% else %}—{% endif %}
-      </div>
-      <div class="period">
-        {% if shop.is_complete and shop.margin_pct is not None %}
-          {{ shop.margin_pct|floatformat:1 }}% margin
-        {% else %}
-          {{ shop.lines_missing_cost }} line{{ shop.lines_missing_cost|pluralize }} missing a cost
-        {% endif %}
-      </div>
-    </div>
+    {% include "web/_profit_card.html" with performance=shop %}
     <div class="card">
       <div class="label">Cost coverage</div>
       <div class="value">{% if shop.completeness_pct is not None %}{{ shop.completeness_pct|floatformat:0 }}%{% else %}—{% endif %}</div>
@@ -40,14 +28,9 @@
     </div>
   </div>
 
-  {% if not shop.is_complete %}
-    <div class="note">
-      Profit is withheld until every sold line has a cost. Shopify does not store
-      Inkthreadable print cost unless you entered <strong>Cost per item</strong> on the
-      variant. Map a blank on the <a href="{% url 'web:mapping_list' %}">mapping page</a>,
-      or a Shopify cost will be used if one exists. Free digital downloads are £0 on
-      purpose — they are hidden below by default.
-    </div>
+  {% include "web/_cost_hint.html" with performance=shop %}
+  {% if hide_free %}
+    <p class="period muted">Free digital downloads are £0 on purpose — they are hidden below by default.</p>
   {% endif %}
 
   <div class="charts two">
@@ -143,11 +126,11 @@
           <td class="num">
             {% if row.is_free %}
               <span class="muted">£0.00</span>
-            {% elif row.is_complete %}
-              <span class="{% if row.profit < 0 %}neg{% else %}pos{% endif %}">£{{ row.profit|floatformat:2 }}</span>
-            {% else %}—{% endif %}
+            {% else %}
+              {% include "web/_profit_cell.html" %}
+            {% endif %}
           </td>
-          <td class="num">{% if row.is_complete and row.margin_pct is not None %}{{ row.margin_pct|floatformat:1 }}%{% else %}—{% endif %}</td>
+          <td class="num">{% if row.is_free %}—{% else %}{% include "web/_margin_cell.html" %}{% endif %}</td>
           <td>
             {% if row.is_free %}
               <span class="pill">digital</span>

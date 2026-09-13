@@ -1,0 +1,22 @@
+{% if not performance.is_complete %}
+  <div class="note">
+    {% if performance.is_estimate %}
+      <strong>Approximate, not the books.</strong>
+      The ~ figure uses the {{ performance.known_units }} unit{{ performance.known_units|pluralize }}
+      that already have a printer cost
+      ({% if performance.known_margin_pct is not None %}{{ performance.known_margin_pct|floatformat:1 }}% margin{% endif %}
+      on £{{ performance.known_net_revenue|floatformat:2 }})
+      and applies that rate to the rest.
+      A green or red figure with a <span class="pill good">complete</span> pill is the real total.
+    {% else %}
+      Contribution profit stays <strong>—</strong> because none of the sold lines have a printer cost.
+    {% endif %}
+    Hover the label for what the number means.
+    Products still showing <strong>—</strong> need a cost:
+    click <strong>add cost</strong> on that row,
+    or open <a href="{% url 'web:mapping_list' %}">Mapping</a>,
+    run <strong>Link supplier orders</strong> on
+    <a href="{% url 'web:integrations' %}">Data health</a>,
+    or enter <strong>Cost per item</strong> on the Shopify variant.
+  </div>
+{% endif %}

@@ -20,6 +20,8 @@
     (hoodie, t-shirt, sweatshirt, …). A product can sit in more than one group.
     {% if ungrouped %}{{ ungrouped }} product{{ ungrouped|pluralize }} still ungrouped.{% endif %}
     Membership is edited in <a href="/admin/catalog/productgroup/">admin</a>.
+    A ~ figure marked <strong>approx.</strong> is not the books — only some items in that group have a printer cost.
+    Green or red with no label is complete.
   </p>
 
   <table>
@@ -46,12 +48,8 @@
           <td class="num">{{ row.orders|intcomma }}</td>
           <td class="num">{{ row.units|intcomma }}</td>
           <td class="num">£{{ row.net_revenue|floatformat:2 }}</td>
-          <td class="num">
-            {% if row.is_complete %}
-              <span class="{% if row.profit < 0 %}neg{% else %}pos{% endif %}">£{{ row.profit|floatformat:2 }}</span>
-            {% else %}—{% endif %}
-          </td>
-          <td class="num">{% if row.is_complete and row.margin_pct is not None %}{{ row.margin_pct|floatformat:1 }}%{% else %}—{% endif %}</td>
+          <td class="num">{% include "web/_profit_cell.html" with allow_estimate=True %}</td>
+          <td class="num">{% include "web/_margin_cell.html" with allow_estimate=True %}</td>
         </tr>
       {% empty %}
         <tr><td colspan="7" class="muted">No groups yet.</td></tr>

@@ -1,0 +1,8 @@
+{% if row.is_complete and row.margin_pct is not None %}
+  {{ row.margin_pct|floatformat:1 }}%
+{% elif allow_estimate and row.is_estimate and row.estimated_margin_pct is not None %}
+  <span class="approx" title="Approximate margin from the units that already have a cost.">~{{ row.estimated_margin_pct|floatformat:1 }}%</span>
+  <span class="est-note">approx.</span>
+{% else %}
+  —
+{% endif %}

@@ -1,0 +1,39 @@
+<div class="card{% if performance.is_estimate %} approx-card{% endif %}">
+  <div class="label">
+    {% if performance.is_estimate %}
+      <span class="tip" title="Not the books. Net sales minus printer cost, printer postage and card fees — but only some sold items have a cost, so this applies their margin to the rest.">Approx. contribution profit</span>
+    {% else %}
+      <span class="tip" title="Net sales minus printer cost, printer postage and card fees. Not after software or salary.">Contribution profit</span>
+    {% endif %}
+  </div>
+  {% if performance.is_complete %}
+    <div class="value {% if performance.profit < 0 %}neg{% else %}pos{% endif %}">
+      £{{ performance.profit|floatformat:2 }}
+    </div>
+    <div class="period">
+      {% if performance.margin_pct is not None %}{{ performance.margin_pct|floatformat:1 }}% margin{% endif %}
+      · <span class="pill good">complete</span>
+      {% if vs_previous and vs_previous.profit_pct is not None %}
+        · <span class="delta {% if vs_previous.profit_pct < 0 %}neg{% else %}pos{% endif %}">{{ vs_previous.profit_pct|floatformat:0 }}% vs previous</span>
+      {% endif %}
+    </div>
+  {% elif performance.is_estimate %}
+    <div class="value approx">~£{{ performance.estimated_profit|floatformat:2 }}</div>
+    <div class="period">
+      <span class="pill">approximate</span>
+      {% if performance.estimated_margin_pct is not None %}
+        · ~{{ performance.estimated_margin_pct|floatformat:1 }}% margin
+      {% endif %}
+      · {{ performance.known_units }} of {{ performance.units }} unit{{ performance.units|pluralize }} have a cost
+    </div>
+  {% else %}
+    <div class="value warn">—</div>
+    <div class="period">
+      {% if performance.lines_missing_cost %}
+        {{ performance.lines_missing_cost }} line{{ performance.lines_missing_cost|pluralize }} without a cost
+      {% else %}
+        no cost on what sold
+      {% endif %}
+    </div>
+  {% endif %}
+</div>

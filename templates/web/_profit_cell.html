@@ -1,0 +1,8 @@
+{% if row.is_complete %}
+  <span class="{% if row.profit < 0 %}neg{% else %}pos{% endif %}">£{{ row.profit|floatformat:2 }}</span>
+{% elif allow_estimate and row.is_estimate %}
+  <span class="approx" title="Approximate: {{ row.known_units }} of {{ row.units }} unit{{ row.units|pluralize }} have a cost ({{ row.known_margin_pct|floatformat:1 }}% margin). That rate is applied to the rest. Not the books.">~£{{ row.estimated_profit|floatformat:2 }}</span>
+  <span class="est-note">approx.</span>
+{% else %}
+  {% include "web/_missing_cost_link.html" %}
+{% endif %}

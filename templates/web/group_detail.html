@@ -21,20 +21,10 @@
       <div class="label">Net sales</div>
       <div class="value">£{{ performance.net_revenue|floatformat:2 }}</div>
     </div>
-    <div class="card">
-      <div class="label">Contribution profit</div>
-      <div class="value {% if not performance.is_complete %}warn{% elif performance.profit < 0 %}neg{% else %}pos{% endif %}">
-        {% if performance.is_complete %}£{{ performance.profit|floatformat:2 }}{% else %}—{% endif %}
-      </div>
-      <div class="period">
-        {% if performance.is_complete and performance.margin_pct is not None %}
-          {{ performance.margin_pct|floatformat:1 }}% margin
-        {% else %}
-          withheld until every sold line has a cost
-        {% endif %}
-      </div>
-    </div>
+    {% include "web/_profit_card.html" %}
   </div>
+
+  {% include "web/_cost_hint.html" %}
 
   <nav class="chips" aria-label="Table filters">
     <a class="{% if hide_free %}on{% endif %}" href="?{{ range_query }}&amp;sort={{ sort }}{% if not hide_zero %}&amp;hide_zero=0{% endif %}{% if hide_free %}&amp;hide_free=0{% endif %}">
@@ -68,8 +58,8 @@
           <td class="num">{{ row.orders|intcomma }}</td>
           <td class="num">{{ row.units|intcomma }}</td>
           <td class="num">£{{ row.net_revenue|floatformat:2 }}</td>
-          <td class="num">{% if row.is_complete %}£{{ row.profit|floatformat:2 }}{% else %}—{% endif %}</td>
-          <td class="num">{% if row.is_complete and row.margin_pct is not None %}{{ row.margin_pct|floatformat:1 }}%{% else %}—{% endif %}</td>
+          <td class="num">{% include "web/_profit_cell.html" %}</td>
+          <td class="num">{% include "web/_margin_cell.html" %}</td>
         </tr>
       {% empty %}
         <tr><td colspan="6" class="muted">No products in this group match the filters.</td></tr>

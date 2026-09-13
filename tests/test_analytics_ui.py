@@ -145,7 +145,10 @@ def test_products_page_ranks_what_sold_and_withholds_incomplete_profit(
     assert response.status_code == 200
     assert b"Lifeline Hoodie" in response.content
     assert b"Mystery Tee" in response.content
-    assert b"missing a cost" in response.content
+    assert b"Approximate, not the books" in response.content
+    assert b"Approx. contribution profit" in response.content
+    assert f"/mapping/{mystery.pk}/".encode() in response.content
+    assert b"add cost" in response.content
     assert b"sort=orders" in response.content
     assert b"Top products by revenue" in response.content
     assert b"sort=name" in response.content
@@ -343,6 +346,9 @@ def test_groups_page_ranks_hoodies_and_tees(client, make_product, make_order):
     assert detail.status_code == 200
     assert b"Lifeline Hoodie" in detail.content
     assert b"Peace T-Shirt" not in detail.content
+    assert b"Contribution profit" in detail.content
+    assert b"Mapping" in detail.content
+    assert b"none of the sold lines have a printer cost" in detail.content
 
 
 def test_pages_accept_a_custom_date_range(client, make_txn, category_by_name):

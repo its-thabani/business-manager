@@ -30,6 +30,7 @@ from apps.analytics.profitability import (
     variant_performance,
 )
 from apps.catalog.models import ProductGroup, normalise_size
+from apps.core.money import quantise
 from apps.core.periods import DateRange
 from apps.sales.models import Order
 from apps.supplier.models import SupplierOrder
@@ -574,6 +575,26 @@ def test_an_aggregate_reports_how_many_lines_lack_a_cost(make_product, map_varia
     assert performance.lines_missing_cost == 1
     assert not performance.is_complete
     assert performance.completeness_pct == Decimal("50.00")
+    assert performance.known_units == 1
+    assert performance.known_margin_pct is not None
+    assert performance.is_estimate
+    rate = performance.known_profit / performance.known_net_revenue
+    assert performance.estimated_profit == quantise(performance.net_revenue * rate)
+    assert performance.displayed_profit == performance.estimated_profit
+    assert performance.profit_basis == "estimate"
+
+
+def test_no_estimate_when_nothing_sold_has_a_cost(make_product, make_order):
+    product = make_product(variants=[("Black", "L", "24.99")])
+    make_order(lines=[(product.variants.get(), 1, "24.99")])
+
+    performance = product_performance(compute_order_profits(), product)
+
+    assert not performance.is_complete
+    assert not performance.is_estimate
+    assert performance.estimated_profit is None
+    assert performance.displayed_profit is None
+    assert performance.profit_basis == ""
 
 
 def test_group_performance_covers_every_product_in_the_group(

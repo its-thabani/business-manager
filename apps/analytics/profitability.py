@@ -590,8 +590,10 @@ class Performance:
     """Aggregated trading performance for a set of order lines.
 
     ``lines_missing_cost`` is deliberately prominent. An aggregate built from
-    partially-costed lines overstates profit, and the count is the only honest way
-    to say how much to trust the total.
+    partially-costed lines overstates profit if missing costs are treated as
+    zero, so the official ``profit`` is only shown when every sold line has a
+    cost. ``estimated_profit`` applies the margin of the known-cost lines to
+    the rest and must be labelled as an estimate.
     """
 
     label: str
@@ -612,6 +614,10 @@ class Performance:
 
     lines_total: int = 0
     lines_missing_cost: int = 0
+    known_lines: int = 0
+    known_units: int = 0
+    known_net_revenue: Decimal = ZERO
+    known_profit: Decimal = ZERO
     refunded_units: Decimal = ZERO
 
     @property
@@ -625,6 +631,55 @@ class Performance:
     @property
     def margin_pct(self) -> Decimal | None:
         return margin_pct(self.profit, self.net_revenue)
+
+    @property
+    def known_margin_pct(self) -> Decimal | None:
+        """Margin on sold lines that actually have a cost. Used for estimates."""
+        if not self.known_lines:
+            return None
+        return margin_pct(self.known_profit, self.known_net_revenue)
+
+    @property
+    def estimated_profit(self) -> Decimal | None:
+        """Apply the known-line margin to all sales. Never the official figure."""
+        if self.is_complete or not self.known_lines:
+            return None
+        rate = safe_divide(self.known_profit, self.known_net_revenue)
+        if rate is None:
+            return None
+        return quantise(self.net_revenue * rate)
+
+    @property
+    def estimated_margin_pct(self) -> Decimal | None:
+        if self.is_complete:
+            return None
+        return self.known_margin_pct
+
+    @property
+    def displayed_profit(self) -> Decimal | None:
+        if self.is_complete:
+            return self.profit
+        return self.estimated_profit
+
+    @property
+    def displayed_margin_pct(self) -> Decimal | None:
+        if self.is_complete:
+            return self.margin_pct
+        return self.estimated_margin_pct
+
+    @property
+    def is_estimate(self) -> bool:
+        return not self.is_complete and self.estimated_profit is not None
+
+    @property
+    def profit_basis(self) -> str:
+        if not self.lines_total:
+            return ""
+        if self.is_complete:
+            return "complete"
+        if self.is_estimate:
+            return "estimate"
+        return ""
 
     @property
     def avg_selling_price(self) -> Decimal | None:
@@ -686,6 +741,12 @@ class Performance:
             "is_complete": self.is_complete,
             "completeness_pct": self.completeness_pct,
             "lines_missing_cost": self.lines_missing_cost,
+            "known_units": self.known_units,
+            "known_profit": self.known_profit,
+            "known_margin_pct": self.known_margin_pct,
+            "estimated_profit": self.estimated_profit,
+            "is_estimate": self.is_estimate,
+            "profit_basis": self.profit_basis,
         }
 
 
@@ -705,6 +766,15 @@ def _accumulate(performance: Performance, line_profit: LineProfit, order_ids: se
         performance.lines_missing_cost += 1
     else:
         performance.supplier_cost = quantise(performance.supplier_cost + line_profit.product_cost)
+        performance.known_lines += 1
+        performance.known_units += line_profit.quantity
+        performance.known_net_revenue = quantise(
+            performance.known_net_revenue + line_profit.net_revenue
+        )
+        if line_profit.contribution_profit is not None:
+            performance.known_profit = quantise(
+                performance.known_profit + line_profit.contribution_profit
+            )
     order_ids.add(line_profit.line.order_id)
 
 
@@ -785,8 +855,17 @@ def all_product_performance(
     return rank_products(list(buckets.values()), sort="units")
 
 
-def rank_products(rows: list[Performance], *, sort: str = "units") -> list[Performance]:
-    """Sort product rows. Incomplete profit ranks last when sorting by money."""
+def rank_products(
+    rows: list[Performance],
+    *,
+    sort: str = "units",
+    use_estimate: bool = False,
+) -> list[Performance]:
+    """Sort product or group rows.
+
+    Incomplete rows rank last when sorting by money, unless ``use_estimate``
+    (group totals) so an approximate profit can be compared.
+    """
     if sort == "name":
         return sorted(rows, key=lambda row: row.label.casefold())
     if sort == "orders":
@@ -794,11 +873,24 @@ def rank_products(rows: list[Performance], *, sort: str = "units") -> list[Perfo
     if sort == "revenue":
         return sorted(rows, key=lambda row: -row.net_revenue)
     if sort == "profit":
+        if use_estimate:
+            return sorted(
+                rows,
+                key=lambda row: (row.displayed_profit is None, -(row.displayed_profit or ZERO)),
+            )
         return sorted(
             rows,
-            key=lambda row: (not row.is_complete, -(row.profit or ZERO)),
+            key=lambda row: (not row.is_complete, -(row.profit if row.is_complete else ZERO)),
         )
     if sort == "margin":
+        if use_estimate:
+            return sorted(
+                rows,
+                key=lambda row: (
+                    row.displayed_margin_pct is None,
+                    -(row.displayed_margin_pct or ZERO),
+                ),
+            )
         return sorted(
             rows,
             key=lambda row: (not row.is_complete, row.margin_pct is None, -(row.margin_pct or ZERO)),
