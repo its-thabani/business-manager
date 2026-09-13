@@ -1,0 +1,139 @@
+{% extends "web/base.html" %}
+{% load humanize %}
+
+{% block subtitle %}
+  {{ date_range.label }} · {{ date_range.start|date:"j M Y" }} – {{ date_range.end|date:"j M Y" }}
+{% endblock %}
+
+{% block content %}
+  {% include "web/_period.html" %}
+  {% include "web/_export.html" %}
+
+  <nav class="chips" aria-label="Shipping filters">
+    <a class="{% if free_only %}on{% endif %}" href="?{{ range_query }}&amp;sort={{ sort }}&amp;osort={{ osort }}{% if free_only %}{% else %}&amp;free=1{% endif %}">
+      {% if free_only %}Free postage only{% else %}All physical orders{% endif %}
+    </a>
+  </nav>
+
+  <div class="cards">
+    <div class="card">
+      <div class="label">Charged</div>
+      <div class="value">£{{ metrics.charged|floatformat:2 }}</div>
+      <div class="period">
+        {{ metrics.paid_postage|intcomma }} paid · {{ metrics.shippable|intcomma }} physical order{{ metrics.shippable|pluralize }}
+      </div>
+    </div>
+    <div class="card">
+      <div class="label">Supplier cost</div>
+      <div class="value">{% if metrics.cost is not None %}£{{ metrics.cost|floatformat:2 }}{% else %}—{% endif %}</div>
+      <div class="period">
+        {% if metrics.coverage_pct is not None %}
+          {{ metrics.cost_known_orders }} of {{ metrics.shippable }} with Inkthreadable postage ({{ metrics.coverage_pct|floatformat:0 }}%)
+        {% else %}
+          no physical orders
+        {% endif %}
+      </div>
+    </div>
+    <div class="card">
+      <div class="label">Postage result</div>
+      <div class="value {% if metrics.net is None %}warn{% elif metrics.net < 0 %}neg{% else %}pos{% endif %}">
+        {% if metrics.net is not None %}£{{ metrics.net|floatformat:2 }}{% else %}—{% endif %}
+      </div>
+      <div class="period">
+        charged minus cost, only on orders with a known postage cost
+      </div>
+    </div>
+    <div class="card">
+      <div class="label">Free postage</div>
+      <div class="value">{{ metrics.free_postage|intcomma }}</div>
+      <div class="period">
+        {% if metrics.free_rate_pct is not None %}{{ metrics.free_rate_pct|floatformat:0 }}% of physical orders{% else %}no physical orders{% endif %}
+        · absorbed {% if metrics.free_cost is not None %}£{{ metrics.free_cost|floatformat:2 }}{% else %}—{% endif %}
+        {% if metrics.free_cost_missing %} · {{ metrics.free_cost_missing }} missing cost{% endif %}
+      </div>
+    </div>
+  </div>
+
+  <p class="period muted">
+    Digital downloads ({{ metrics.digital }}) are not free shipping — they do not require postage.
+    Missing Inkthreadable postage stays — rather than £0.
+  </p>
+
+  <div class="chart" style="margin-top:1.25rem">
+    <div class="label">Postage charged vs known supplier cost</div>
+    <div class="chart-legend">
+      <span><i class="swatch" style="background:#818cf8"></i>Charged</span>
+      <span><i class="swatch" style="background:#4f46e5"></i>Known cost</span>
+    </div>
+    <div class="cols">
+      {% for month in months %}
+        <div class="col">
+          <div class="bars">
+            <span class="barbit rev" style="height:{{ month.charged_pct }}%" title="£{{ month.charged|floatformat:2 }} charged"></span>
+            <span class="barbit supplier" style="height:{{ month.cost_pct }}%" title="£{{ month.cost|floatformat:2 }} known cost"></span>
+          </div>
+          <div class="x">{{ month.label }}</div>
+        </div>
+      {% endfor %}
+    </div>
+    <p class="period muted">Cost bars are only postage Inkthreadable recorded. A flat month is missing data, not free postage.</p>
+  </div>
+
+  <h2>By country</h2>
+  <table>
+    <thead>
+      <tr>
+        <th><a class="{% if sort == 'country' %}on{% endif %}" href="?{{ range_query }}&amp;sort=country&amp;osort={{ osort }}{% if free_only %}&amp;free=1{% endif %}">Country</a></th>
+        <th class="num"><a class="{% if sort == 'orders' %}on{% endif %}" href="?{{ range_query }}&amp;sort=orders&amp;osort={{ osort }}{% if free_only %}&amp;free=1{% endif %}">Orders</a></th>
+        <th class="num"><a class="{% if sort == 'free' %}on{% endif %}" href="?{{ range_query }}&amp;sort=free&amp;osort={{ osort }}{% if free_only %}&amp;free=1{% endif %}">Free</a></th>
+        <th class="num"><a class="{% if sort == 'charged' %}on{% endif %}" href="?{{ range_query }}&amp;sort=charged&amp;osort={{ osort }}{% if free_only %}&amp;free=1{% endif %}">Charged</a></th>
+        <th class="num"><a class="{% if sort == 'cost' %}on{% endif %}" href="?{{ range_query }}&amp;sort=cost&amp;osort={{ osort }}{% if free_only %}&amp;free=1{% endif %}">Cost</a></th>
+        <th class="num"><a class="{% if sort == 'net' %}on{% endif %}" href="?{{ range_query }}&amp;sort=net&amp;osort={{ osort }}{% if free_only %}&amp;free=1{% endif %}">Result</a></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in countries %}
+        <tr>
+          <td>{{ row.country }}</td>
+          <td class="num">{{ row.orders }}</td>
+          <td class="num">{{ row.free_orders }}</td>
+          <td class="num">£{{ row.charged|floatformat:2 }}</td>
+          <td class="num">{% if row.cost is not None %}£{{ row.cost|floatformat:2 }}{% else %}—{% endif %}{% if row.cost_missing %} <span class="muted">{{ row.cost_missing }} missing</span>{% endif %}</td>
+          <td class="num {% if row.net is None %}{% elif row.net < 0 %}neg{% else %}pos{% endif %}">{% if row.net is not None %}£{{ row.net|floatformat:2 }}{% else %}—{% endif %}</td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="6" class="muted">No physical orders in this period.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <h2>{% if free_only %}Free-postage orders{% else %}Physical orders{% endif %}</h2>
+  <table>
+    <thead>
+      <tr>
+        <th><a class="{% if osort == 'name' %}on{% endif %}" href="?{{ range_query }}&amp;sort={{ sort }}&amp;osort=name{% if free_only %}&amp;free=1{% endif %}">Order</a></th>
+        <th><a class="{% if osort == 'date' %}on{% endif %}" href="?{{ range_query }}&amp;sort={{ sort }}&amp;osort=date{% if free_only %}&amp;free=1{% endif %}">Date</a></th>
+        <th><a class="{% if osort == 'country' %}on{% endif %}" href="?{{ range_query }}&amp;sort={{ sort }}&amp;osort=country{% if free_only %}&amp;free=1{% endif %}">Country</a></th>
+        <th class="num"><a class="{% if osort == 'charged' %}on{% endif %}" href="?{{ range_query }}&amp;sort={{ sort }}&amp;osort=charged{% if free_only %}&amp;free=1{% endif %}">Charged</a></th>
+        <th class="num"><a class="{% if osort == 'cost' %}on{% endif %}" href="?{{ range_query }}&amp;sort={{ sort }}&amp;osort=cost{% if free_only %}&amp;free=1{% endif %}">Cost</a></th>
+        <th class="num"><a class="{% if osort == 'net' %}on{% endif %}" href="?{{ range_query }}&amp;sort={{ sort }}&amp;osort=net{% if free_only %}&amp;free=1{% endif %}">Result</a></th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in orders %}
+        <tr>
+          <td><a href="{% url 'web:order_detail' row.order_id %}">{{ row.name }}</a></td>
+          <td>{{ row.placed_on|date:"j M Y" }}</td>
+          <td>{{ row.country }}</td>
+          <td class="num">£{{ row.charged|floatformat:2 }}</td>
+          <td class="num">{% if row.cost is not None %}£{{ row.cost|floatformat:2 }}{% else %}—{% endif %}</td>
+          <td class="num {% if row.net is None %}{% elif row.net < 0 %}neg{% else %}pos{% endif %}">{% if row.net is not None %}£{{ row.net|floatformat:2 }}{% else %}—{% endif %}</td>
+          <td>{% if row.is_free %}<span class="pill warn">free</span>{% endif %}</td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="7" class="muted">{% if free_only %}No free-postage physical orders in this period.{% else %}No physical orders in this period.{% endif %}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endblock %}

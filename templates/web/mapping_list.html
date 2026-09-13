@@ -1,0 +1,98 @@
+{% extends "web/base.html" %}
+{% load humanize %}
+
+{% block subtitle %}Which products still need a supplier cost{% endblock %}
+
+{% block content %}
+  <div class="cards">
+    <div class="card">
+      <div class="label">Sold units with a cost</div>
+      <div class="value">{{ totals.units_with_cost|intcomma }}</div>
+      <div class="period">of {{ totals.sold_units|intcomma }} sold</div>
+    </div>
+    <div class="card">
+      <div class="label">Sold units still unknown</div>
+      <div class="value {% if missing_units %}warn{% endif %}">{{ missing_units|intcomma }}</div>
+      <div class="period">these keep profit as —</div>
+    </div>
+    <div class="card">
+      <div class="label">Products to review</div>
+      <div class="value">{{ totals.needs_review|intcomma }}</div>
+      <div class="period">unmapped, partial or suggested</div>
+    </div>
+    <div class="card">
+      <div class="label">Digital / no supplier</div>
+      <div class="value">{{ totals.digital|intcomma }}</div>
+      <div class="period">cost is £0 on purpose</div>
+    </div>
+  </div>
+
+  <div class="actions">
+    <form method="post">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="suggest_all">
+      <button class="btn btn-primary" type="submit">Suggest mappings</button>
+    </form>
+    <span class="muted">Safe to re-run. Confirmed matches are left alone.</span>
+    <a class="btn" href="{% url 'web:blank_list' %}">Inkthreadable blanks</a>
+  </div>
+
+  <nav class="chips" aria-label="Mapping status">
+    <a class="{% if selected_filter == 'needs_review' %}on{% endif %}" href="?filter=needs_review">Needs review</a>
+    <a class="{% if selected_filter == 'all' %}on{% endif %}" href="?filter=all">All</a>
+    <a class="{% if selected_filter == 'digital' %}on{% endif %}" href="?filter=digital">Digital</a>
+    <a class="{% if selected_filter == 'confirmed' %}on{% endif %}" href="?filter=confirmed">Confirmed</a>
+  </nav>
+
+  <h2>Products</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Product</th>
+        <th>Blank / status</th>
+        <th class="num">Units sold</th>
+        <th class="num">Units with cost</th>
+        <th class="num">Variants mapped</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in rows %}
+        <tr>
+          <td>
+            <a href="{% url 'web:mapping_detail' row.product.pk %}">{{ row.product.title }}</a>
+            <div class="muted">{{ row.product.product_type|default:"" }}</div>
+          </td>
+          <td>
+            {% if row.status == "digital" %}
+              <span class="pill good">digital</span>
+            {% elif row.status == "confirmed" %}
+              <span class="pill good">confirmed</span>
+            {% elif row.status == "suggested" %}
+              <span class="pill warn">suggested</span>
+            {% elif row.status == "uncertain" %}
+              <span class="pill warn">uncertain</span>
+            {% elif row.status == "partial" %}
+              <span class="pill warn">partial</span>
+            {% else %}
+              <span class="pill bad">unmapped</span>
+            {% endif %}
+            <div class="muted">
+              {% if row.mapping.no_supplier %}
+                no supplier
+              {% elif row.mapping.supplier_product %}
+                {{ row.mapping.supplier_product }}
+              {% else %}
+                —
+              {% endif %}
+            </div>
+          </td>
+          <td class="num">{{ row.units|intcomma }}</td>
+          <td class="num">{{ row.units_with_cost|intcomma }}</td>
+          <td class="num">{{ row.mapped_variants }} / {{ row.variant_count }}</td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="5" class="muted">Nothing in this filter. Sync Shopify first, then suggest mappings.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endblock %}

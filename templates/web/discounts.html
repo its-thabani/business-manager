@@ -1,0 +1,132 @@
+{% extends "web/base.html" %}
+{% load humanize %}
+
+{% block subtitle %}
+  {{ date_range.label }} · {{ date_range.start|date:"j M Y" }} – {{ date_range.end|date:"j M Y" }}
+{% endblock %}
+
+{% block content %}
+  {% include "web/_period.html" %}
+  {% include "web/_export.html" %}
+
+  <nav class="chips" aria-label="Discount filters">
+    <a class="{% if hide_digital %}on{% endif %}" href="?{{ range_query }}&amp;sort={{ sort }}&amp;osort={{ osort }}{% if code %}&amp;code={{ code|urlencode }}{% endif %}{% if hide_digital %}&amp;hide_digital=0{% endif %}">
+      {% if hide_digital %}Merchandise only{% else %}Including digital downloads{% endif %}
+    </a>
+    {% if code %}
+      <a class="on" href="?{{ range_query }}&amp;sort={{ sort }}&amp;osort={{ osort }}{% if not hide_digital %}&amp;hide_digital=0{% endif %}">{{ code }} · clear</a>
+    {% endif %}
+  </nav>
+
+  <div class="cards">
+    <div class="card">
+      <div class="label">Given away</div>
+      <div class="value">£{{ metrics.amount|floatformat:2 }}</div>
+      <div class="period">
+        {% if metrics.of_list_pct is not None %}{{ metrics.of_list_pct|floatformat:1 }}% of list price{% else %}no list revenue{% endif %}
+      </div>
+    </div>
+    <div class="card">
+      <div class="label">Discounted orders</div>
+      <div class="value">{{ metrics.discounted|intcomma }}</div>
+      <div class="period">
+        {% if metrics.rate_pct is not None %}{{ metrics.rate_pct|floatformat:0 }}% of {{ metrics.universe|intcomma }} order{{ metrics.universe|pluralize }}{% else %}no orders{% endif %}
+      </div>
+    </div>
+    <div class="card">
+      <div class="label">Average discount</div>
+      <div class="value">{% if metrics.average is not None %}£{{ metrics.average|floatformat:2 }}{% else %}—{% endif %}</div>
+      <div class="period">on orders that had a discount</div>
+    </div>
+    <div class="card">
+      <div class="label">Profit given away</div>
+      <div class="value {% if metrics.profit_impact is None %}warn{% endif %}">
+        {% if metrics.profit_impact is not None %}£{{ metrics.profit_impact|floatformat:2 }}{% else %}—{% endif %}
+      </div>
+      <div class="period">
+        {% if metrics.profit_known %}
+          {{ metrics.profit_known }} order{{ metrics.profit_known|pluralize }} with a complete cost
+          {% if metrics.profit_missing %} · {{ metrics.profit_missing }} missing{% endif %}
+        {% else %}
+          withheld until discounted orders have a cost
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <p class="period muted">
+    A discount reduces revenue; the garment still costs the same to print.
+    Profit given away equals the discount only when every cost on that order is known.
+    {% if hide_digital %}{{ metrics.digital }} digital download{{ metrics.digital|pluralize }} hidden.{% endif %}
+  </p>
+
+  <div class="chart" style="margin-top:1.25rem">
+    <div class="label">Discount given each month</div>
+    <div class="cols">
+      {% for month in months %}
+        <div class="col">
+          <div class="bars">
+            <span class="barbit rev" style="height:{{ month.amount_pct }}%" title="£{{ month.amount|floatformat:2 }} · {{ month.orders }} order{{ month.orders|pluralize }}"></span>
+          </div>
+          <div class="x">{{ month.label }}</div>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <h2>By code</h2>
+  <table>
+    <thead>
+      <tr>
+        <th><a class="{% if sort == 'code' %}on{% endif %}" href="?{{ range_query }}&amp;sort=code&amp;osort={{ osort }}{% if code %}&amp;code={{ code|urlencode }}{% endif %}{% if not hide_digital %}&amp;hide_digital=0{% endif %}">Code</a></th>
+        <th class="num"><a class="{% if sort == 'orders' %}on{% endif %}" href="?{{ range_query }}&amp;sort=orders&amp;osort={{ osort }}{% if code %}&amp;code={{ code|urlencode }}{% endif %}{% if not hide_digital %}&amp;hide_digital=0{% endif %}">Orders</a></th>
+        <th class="num"><a class="{% if sort == 'amount' %}on{% endif %}" href="?{{ range_query }}&amp;sort=amount&amp;osort={{ osort }}{% if code %}&amp;code={{ code|urlencode }}{% endif %}{% if not hide_digital %}&amp;hide_digital=0{% endif %}">Given away</a></th>
+        <th class="num"><a class="{% if sort == 'avg' %}on{% endif %}" href="?{{ range_query }}&amp;sort=avg&amp;osort={{ osort }}{% if code %}&amp;code={{ code|urlencode }}{% endif %}{% if not hide_digital %}&amp;hide_digital=0{% endif %}">Average</a></th>
+        <th class="num"><a class="{% if sort == 'profit' %}on{% endif %}" href="?{{ range_query }}&amp;sort=profit&amp;osort={{ osort }}{% if code %}&amp;code={{ code|urlencode }}{% endif %}{% if not hide_digital %}&amp;hide_digital=0{% endif %}">Profit</a></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in codes %}
+        <tr>
+          <td>
+            <a href="?{{ range_query }}&amp;sort={{ sort }}&amp;osort={{ osort }}&amp;code={{ row.code|urlencode }}{% if not hide_digital %}&amp;hide_digital=0{% endif %}">{{ row.code }}</a>
+          </td>
+          <td class="num">{{ row.orders }}</td>
+          <td class="num">£{{ row.amount|floatformat:2 }}</td>
+          <td class="num">{% if row.average is not None %}£{{ row.average|floatformat:2 }}{% else %}—{% endif %}</td>
+          <td class="num">{% if row.profit_impact is not None %}£{{ row.profit_impact|floatformat:2 }}{% else %}—{% endif %}{% if row.profit_missing %} <span class="muted">{{ row.profit_missing }} missing</span>{% endif %}</td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="5" class="muted">No discounts in this period.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <h2>{% if code %}Orders · {{ code }}{% else %}Discounted orders{% endif %}</h2>
+  <table>
+    <thead>
+      <tr>
+        <th><a class="{% if osort == 'name' %}on{% endif %}" href="?{{ range_query }}&amp;sort={{ sort }}&amp;osort=name{% if code %}&amp;code={{ code|urlencode }}{% endif %}{% if not hide_digital %}&amp;hide_digital=0{% endif %}">Order</a></th>
+        <th><a class="{% if osort == 'date' %}on{% endif %}" href="?{{ range_query }}&amp;sort={{ sort }}&amp;osort=date{% if code %}&amp;code={{ code|urlencode }}{% endif %}{% if not hide_digital %}&amp;hide_digital=0{% endif %}">Date</a></th>
+        <th><a class="{% if osort == 'code' %}on{% endif %}" href="?{{ range_query }}&amp;sort={{ sort }}&amp;osort=code{% if code %}&amp;code={{ code|urlencode }}{% endif %}{% if not hide_digital %}&amp;hide_digital=0{% endif %}">Code</a></th>
+        <th class="num"><a class="{% if osort == 'amount' %}on{% endif %}" href="?{{ range_query }}&amp;sort={{ sort }}&amp;osort=amount{% if code %}&amp;code={{ code|urlencode }}{% endif %}{% if not hide_digital %}&amp;hide_digital=0{% endif %}">Discount</a></th>
+        <th class="num"><a class="{% if osort == 'total' %}on{% endif %}" href="?{{ range_query }}&amp;sort={{ sort }}&amp;osort=total{% if code %}&amp;code={{ code|urlencode }}{% endif %}{% if not hide_digital %}&amp;hide_digital=0{% endif %}">Paid</a></th>
+        <th class="num"><a class="{% if osort == 'profit' %}on{% endif %}" href="?{{ range_query }}&amp;sort={{ sort }}&amp;osort=profit{% if code %}&amp;code={{ code|urlencode }}{% endif %}{% if not hide_digital %}&amp;hide_digital=0{% endif %}">Profit</a></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in orders %}
+        <tr>
+          <td><a href="{% url 'web:order_detail' row.order_id %}">{{ row.name }}</a></td>
+          <td>{{ row.placed_on|date:"j M Y" }}</td>
+          <td>{{ row.code }}</td>
+          <td class="num">£{{ row.amount|floatformat:2 }}</td>
+          <td class="num">£{{ row.total_price|floatformat:2 }}</td>
+          <td class="num">{% if row.profit_impact is not None %}£{{ row.profit_impact|floatformat:2 }}{% else %}—{% endif %}</td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="6" class="muted">No discounted orders{% if code %} for this code{% endif %} in this period.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endblock %}

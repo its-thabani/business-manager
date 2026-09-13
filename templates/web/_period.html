@@ -1,0 +1,18 @@
+<nav class="filters" aria-label="Date range">
+  {% for key, label in presets.items %}
+    <a class="{% if key == selected_preset %}on{% endif %}" href="?{% if extra_query %}{{ extra_query }}&{% endif %}range={{ key }}">{{ label }}</a>
+  {% endfor %}
+</nav>
+<form class="custom-range" method="get" aria-label="Custom date range">
+  {% for key, value in request.GET.items %}
+    {% if key != "range" and key != "start" and key != "end" %}
+      <input type="hidden" name="{{ key }}" value="{{ value }}">
+    {% endif %}
+  {% endfor %}
+  <label class="sr-only" for="period-start">From</label>
+  <input type="date" id="period-start" name="start" value="{{ date_range.start|date:'Y-m-d' }}" required>
+  <span class="muted">to</span>
+  <label class="sr-only" for="period-end">To</label>
+  <input type="date" id="period-end" name="end" value="{{ date_range.end|date:'Y-m-d' }}" required>
+  <button class="btn" type="submit">Apply dates</button>
+</form>

@@ -1,0 +1,112 @@
+{% extends "web/base.html" %}
+
+{% block subtitle %}Bank categorisation rules{% endblock %}
+
+{% block content %}
+  <h2>Categories</h2>
+  <p class="muted">
+    Rules decide what a Monzo row <em>means</em>. They are tried in priority
+    order (lowest first). The first match wins. Rows you set by hand, or that
+    came from the spreadsheet, stay locked and are never overwritten.
+  </p>
+
+  {% if uncategorised %}
+    <div class="note">
+      <strong>{{ uncategorised }}</strong> transaction{{ uncategorised|pluralize }}
+      {{ uncategorised|pluralize:"has,have" }} no category.
+      Add a rule below, then apply the rules.
+    </div>
+  {% endif %}
+
+  <form method="post" class="actions">{% csrf_token %}
+    <input type="hidden" name="action" value="apply">
+    <button class="btn btn-primary" type="submit">Apply rules</button>
+  </form>
+
+  <h2>Add a rule</h2>
+  <form method="post" class="card" style="margin-top:1rem">{% csrf_token %}
+    <input type="hidden" name="action" value="add">
+    <div class="sim-grid">
+      <div>
+        <label for="pattern">Pattern</label>
+        <input type="text" id="pattern" name="pattern" required placeholder="INKTHREADABLE">
+      </div>
+      <div>
+        <label for="match_type">Match</label>
+        <select id="match_type" name="match_type">
+          {% for value, label in match_types %}
+            <option value="{{ value }}"{% if value == "CONTAINS" %} selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label for="match_field">Look at</label>
+        <select id="match_field" name="match_field">
+          {% for value, label in match_fields %}
+            <option value="{{ value }}"{% if value == "ANY_TEXT" %} selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label for="amount_condition">Direction</label>
+        <select id="amount_condition" name="amount_condition">
+          {% for value, label in amount_conditions %}
+            <option value="{{ value }}">{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label for="category">Category</label>
+        <select id="category" name="category" required>
+          {% for category in categories %}
+            <option value="{{ category.pk }}">{{ category.name }} ({{ category.get_kind_display }})</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label for="priority">Priority (lowest first)</label>
+        <input type="number" id="priority" name="priority" value="100">
+      </div>
+      <div>
+        <label for="name">Label (optional)</label>
+        <input type="text" id="name" name="name" placeholder="Stripe settlements">
+      </div>
+    </div>
+    <div class="actions">
+      <label><input type="checkbox" name="is_active" checked> Active</label>
+      <button class="btn btn-primary" type="submit">Add rule</button>
+    </div>
+  </form>
+
+  <h2>Existing rules</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Priority</th>
+        <th>Rule</th>
+        <th>Category</th>
+        <th>Direction</th>
+        <th class="num">Hits</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for rule in rules %}
+        <tr>
+          <td>{{ rule.priority }}</td>
+          <td>
+            {{ rule.get_match_type_display }} “{{ rule.pattern }}”
+            {% if rule.name %}<div class="muted">{{ rule.name }}</div>{% endif %}
+            {% if not rule.is_active %}<span class="pill warn">off</span>{% endif %}
+          </td>
+          <td>{{ rule.category.name }}</td>
+          <td class="muted">{{ rule.get_amount_condition_display }}</td>
+          <td class="num">{{ rule.match_count }}</td>
+          <td><a href="{% url 'web:category_rule_edit' rule.pk %}">Edit</a></td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="6" class="muted">No rules yet. Seed finance or add one above.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endblock %}

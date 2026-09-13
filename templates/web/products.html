@@ -1,0 +1,166 @@
+{% extends "web/base.html" %}
+{% load humanize %}
+
+{% block subtitle %}
+  {{ date_range.label }} · {{ date_range.start|date:"j M Y" }} – {{ date_range.end|date:"j M Y" }}
+{% endblock %}
+
+{% block content %}
+  {% include "web/_period.html" %}
+  {% include "web/_export.html" %}
+
+  <div class="cards">
+    <div class="card">
+      <div class="label">Units sold</div>
+      <div class="value">{{ shop.units|intcomma }}</div>
+      <div class="period">{{ shop.orders|intcomma }} orders</div>
+    </div>
+    <div class="card">
+      <div class="label">Net sales</div>
+      <div class="value">£{{ shop.net_revenue|floatformat:2 }}</div>
+      <div class="period">Shopify, after discounts and refunds</div>
+    </div>
+    <div class="card">
+      <div class="label">Contribution profit</div>
+      <div class="value {% if not shop.is_complete %}warn{% elif shop.profit < 0 %}neg{% else %}pos{% endif %}">
+        {% if shop.is_complete %}£{{ shop.profit|floatformat:2 }}{% else %}—{% endif %}
+      </div>
+      <div class="period">
+        {% if shop.is_complete and shop.margin_pct is not None %}
+          {{ shop.margin_pct|floatformat:1 }}% margin
+        {% else %}
+          {{ shop.lines_missing_cost }} line{{ shop.lines_missing_cost|pluralize }} missing a cost
+        {% endif %}
+      </div>
+    </div>
+    <div class="card">
+      <div class="label">Cost coverage</div>
+      <div class="value">{% if shop.completeness_pct is not None %}{{ shop.completeness_pct|floatformat:0 }}%{% else %}—{% endif %}</div>
+      <div class="period">of sold lines with a known cost</div>
+    </div>
+  </div>
+
+  {% if not shop.is_complete %}
+    <div class="note">
+      Profit is withheld until every sold line has a cost. Shopify does not store
+      Inkthreadable print cost unless you entered <strong>Cost per item</strong> on the
+      variant. Map a blank on the <a href="{% url 'web:mapping_list' %}">mapping page</a>,
+      or a Shopify cost will be used if one exists. Free digital downloads are £0 on
+      purpose — they are hidden below by default.
+    </div>
+  {% endif %}
+
+  <div class="charts two">
+    <div class="chart">
+      <div class="label">Monthly sales</div>
+      <div class="chart-legend">
+        <span><i class="swatch" style="background:#818cf8"></i>Net sales</span>
+        <span><i class="swatch" style="background:#15803d"></i>Provisional profit</span>
+      </div>
+      <div class="cols">
+        {% for month in months %}
+          <div class="col">
+            <div class="bars">
+              <span class="barbit rev" style="height:{{ month.revenue_pct }}%" title="£{{ month.revenue|floatformat:2 }}"></span>
+              <span class="barbit profit {% if month.profit_neg %}neg{% endif %}" style="height:{{ month.profit_pct }}%" title="£{{ month.profit|floatformat:2 }}"></span>
+            </div>
+            <div class="x">{{ month.label }}</div>
+          </div>
+        {% endfor %}
+      </div>
+      <p class="period muted">Profit bars use known costs only, so they overstate when mappings are missing.</p>
+    </div>
+    <div class="stack">
+      <div class="chart">
+        <div class="label">Top products by units</div>
+        {% for row in top_units %}
+          <div class="hbar">
+            <div class="name">
+              {% if row.product_id %}<a href="{% url 'web:product_detail' row.product_id %}?{{ range_query }}">{{ row.label }}</a>
+              {% else %}{{ row.label }}{% endif %}
+            </div>
+            <div class="track"><span style="width:{{ row.bar_pct }}%"></span></div>
+            <div class="n">{{ row.units|intcomma }}</div>
+          </div>
+        {% empty %}
+          <p class="muted">No sales in this period.</p>
+        {% endfor %}
+      </div>
+      <div class="chart">
+        <div class="label">Top products by revenue</div>
+        {% for row in top_revenue %}
+          <div class="hbar">
+            <div class="name">
+              {% if row.product_id %}<a href="{% url 'web:product_detail' row.product_id %}?{{ range_query }}">{{ row.label }}</a>
+              {% else %}{{ row.label }}{% endif %}
+            </div>
+            <div class="track"><span style="width:{{ row.bar_pct }}%"></span></div>
+            <div class="n">£{{ row.revenue|floatformat:0 }}</div>
+          </div>
+        {% empty %}
+          <p class="muted">No paid sales in this period.</p>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <h2>Products that sold</h2>
+  <nav class="chips" aria-label="Table filters">
+    <a class="{% if hide_free %}on{% endif %}" href="?{{ range_query }}&amp;sort={{ sort }}{% if not hide_zero %}&amp;hide_zero=0{% endif %}{% if hide_free %}&amp;hide_free=0{% endif %}">
+      {% if hide_free %}Showing paid only{% else %}Include £0 / free downloads{% endif %}
+    </a>
+    <a class="{% if hide_zero %}on{% endif %}" href="?{{ range_query }}&amp;sort={{ sort }}{% if not hide_free %}&amp;hide_free=0{% endif %}{% if hide_zero %}&amp;hide_zero=0{% endif %}">
+      {% if hide_zero %}Hiding 0-order products{% else %}Include products with 0 orders{% endif %}
+    </a>
+  </nav>
+  {% if hide_free and free_count %}
+    <p class="period muted">{{ free_count }} free digital product{{ free_count|pluralize }} hidden. They have units but £0 sales because Shopify charged nothing.</p>
+  {% endif %}
+  <table>
+    <thead>
+      <tr>
+        <th><a class="{% if sort == 'name' %}on{% endif %}" href="?{{ range_query }}&amp;sort=name{% if not hide_free %}&amp;hide_free=0{% endif %}{% if not hide_zero %}&amp;hide_zero=0{% endif %}">Product</a></th>
+        <th class="num"><a class="{% if sort == 'orders' %}on{% endif %}" href="?{{ range_query }}&amp;sort=orders{% if not hide_free %}&amp;hide_free=0{% endif %}{% if not hide_zero %}&amp;hide_zero=0{% endif %}">Orders</a></th>
+        <th class="num"><a class="{% if sort == 'units' %}on{% endif %}" href="?{{ range_query }}&amp;sort=units{% if not hide_free %}&amp;hide_free=0{% endif %}{% if not hide_zero %}&amp;hide_zero=0{% endif %}">Units</a></th>
+        <th class="num"><a class="{% if sort == 'revenue' %}on{% endif %}" href="?{{ range_query }}&amp;sort=revenue{% if not hide_free %}&amp;hide_free=0{% endif %}{% if not hide_zero %}&amp;hide_zero=0{% endif %}">Net sales</a></th>
+        <th class="num"><a class="{% if sort == 'profit' %}on{% endif %}" href="?{{ range_query }}&amp;sort=profit{% if not hide_free %}&amp;hide_free=0{% endif %}{% if not hide_zero %}&amp;hide_zero=0{% endif %}">Profit</a></th>
+        <th class="num"><a class="{% if sort == 'margin' %}on{% endif %}" href="?{{ range_query }}&amp;sort=margin{% if not hide_free %}&amp;hide_free=0{% endif %}{% if not hide_zero %}&amp;hide_zero=0{% endif %}">Margin</a></th>
+        <th>Cost</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in products %}
+        <tr>
+          <td>
+            {% if row.product_id %}
+              <a href="{% url 'web:product_detail' row.product_id %}?{{ range_query }}">{{ row.label }}</a>
+            {% else %}{{ row.label }}{% endif %}
+            {% if row.is_free %}<span class="pill">free</span>{% endif %}
+          </td>
+          <td class="num">{{ row.orders|intcomma }}</td>
+          <td class="num">{{ row.units|intcomma }}</td>
+          <td class="num">{% if row.is_free %}£0.00{% else %}£{{ row.net_revenue|floatformat:2 }}{% endif %}</td>
+          <td class="num">
+            {% if row.is_free %}
+              <span class="muted">£0.00</span>
+            {% elif row.is_complete %}
+              <span class="{% if row.profit < 0 %}neg{% else %}pos{% endif %}">£{{ row.profit|floatformat:2 }}</span>
+            {% else %}—{% endif %}
+          </td>
+          <td class="num">{% if row.is_complete and row.margin_pct is not None %}{{ row.margin_pct|floatformat:1 }}%{% else %}—{% endif %}</td>
+          <td>
+            {% if row.is_free %}
+              <span class="pill">digital</span>
+            {% elif row.is_complete %}
+              <span class="pill good">complete</span>
+            {% else %}
+              <span class="pill warn">{{ row.completeness_pct|floatformat:0 }}%</span>
+            {% endif %}
+          </td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="7" class="muted">No products match these filters. Sync Shopify orders first, or show free / zero-order rows.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endblock %}

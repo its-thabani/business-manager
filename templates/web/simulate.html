@@ -1,0 +1,187 @@
+{% extends "web/base.html" %}
+{% load humanize %}
+
+{% block subtitle %}
+  What-if · {{ date_range.label }} · {{ date_range.start|date:"j M Y" }} – {{ date_range.end|date:"j M Y" }}
+{% endblock %}
+
+{% block content %}
+  {% include "web/_period.html" %}
+
+  <p class="muted" style="margin-top:1rem">
+    This does not change real books. It replays actual orders in this period under
+    the assumptions you type, and labels every assumption.
+  </p>
+
+  <form method="get" class="card" style="margin-top:1rem">
+    {% if selected_preset == "custom" %}
+      <input type="hidden" name="start" value="{{ date_range.start|date:'Y-m-d' }}">
+      <input type="hidden" name="end" value="{{ date_range.end|date:'Y-m-d' }}">
+    {% else %}
+      <input type="hidden" name="range" value="{{ selected_preset }}">
+    {% endif %}
+    <div class="sim-grid">
+      <div>
+        <label for="product">Product</label>
+        <select name="product" id="product">
+          <option value="">Whole shop</option>
+          {% for item in products %}
+            <option value="{{ item.pk }}" {% if spec.product_id == item.pk %}selected{% endif %}>{{ item.title }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label for="new_price">New unit price (£)</label>
+        <input type="number" step="0.01" name="new_price" id="new_price" value="{{ spec.new_price|default:'' }}">
+      </div>
+      <div>
+        <label for="price_change">Price change (£)</label>
+        <input type="number" step="0.01" name="price_change" id="price_change" value="{{ spec.price_change|default:'' }}">
+      </div>
+      <div>
+        <label for="volume_change_pct">Volume change (%)</label>
+        <input type="number" step="0.1" name="volume_change_pct" id="volume_change_pct" value="{{ spec.volume_change_pct|default:'' }}">
+      </div>
+      <div>
+        <label for="new_unit_cost">New supplier cost (£)</label>
+        <input type="number" step="0.01" name="new_unit_cost" id="new_unit_cost" value="{{ spec.new_unit_cost|default:'' }}">
+      </div>
+      <div>
+        <label for="cost_change">Cost change (£)</label>
+        <input type="number" step="0.01" name="cost_change" id="cost_change" value="{{ spec.cost_change|default:'' }}">
+      </div>
+      <div>
+        <label for="cost_change_pct">Cost change (%)</label>
+        <input type="number" step="0.1" name="cost_change_pct" id="cost_change_pct" value="{{ spec.cost_change_pct|default:'' }}">
+      </div>
+      <div>
+        <label for="discount_pct">Extra discount (%)</label>
+        <input type="number" step="0.1" name="discount_pct" id="discount_pct" value="{{ spec.discount_pct|default:'' }}">
+      </div>
+      <div>
+        <label for="free_shipping">
+          <input type="checkbox" name="free_shipping" id="free_shipping" value="1" {% if spec.free_shipping %}checked{% endif %}>
+          Free shipping
+        </label>
+      </div>
+    </div>
+    <button class="btn btn-primary" type="submit">Run scenario</button>
+  </form>
+
+  {% if result.assumptions %}
+    <div class="note">
+      <strong>Assumptions</strong>
+      <ul>
+        {% for row in result.assumptions %}
+          <li>{{ row }}</li>
+        {% endfor %}
+      </ul>
+      Totals include postage charged to the customer, so free shipping is visible.
+    </div>
+  {% endif %}
+  {% for note in result.notes %}
+    <div class="note">{{ note }}</div>
+  {% endfor %}
+
+  <div class="cards">
+    <div class="card">
+      <div class="label">Revenue now</div>
+      <div class="value">£{{ result.baseline.net_revenue|floatformat:2 }}</div>
+    </div>
+    <div class="card">
+      <div class="label">Revenue if</div>
+      <div class="value">£{{ result.projected.net_revenue|floatformat:2 }}</div>
+      <div class="period {% if result.revenue_delta < 0 %}neg{% else %}pos{% endif %}">
+        {% if result.revenue_delta > 0 %}+{% endif %}£{{ result.revenue_delta|floatformat:2 }}
+      </div>
+    </div>
+    <div class="card">
+      <div class="label">Profit now</div>
+      <div class="value">
+        {% if result.baseline.is_complete %}£{{ result.baseline.profit|floatformat:2 }}{% else %}—{% endif %}
+      </div>
+      <div class="period">{% if not result.baseline.is_complete %}incomplete costs{% endif %}</div>
+    </div>
+    <div class="card">
+      <div class="label">Profit if</div>
+      <div class="value">
+        {% if result.projected.is_complete %}£{{ result.projected.profit|floatformat:2 }}{% else %}—{% endif %}
+      </div>
+      <div class="period">
+        {% if result.profit_delta is not None %}
+          <span class="{% if result.profit_delta < 0 %}neg{% else %}pos{% endif %}">
+            {% if result.profit_delta > 0 %}+{% endif %}£{{ result.profit_delta|floatformat:2 }}
+          </span>
+        {% else %}
+          unknown — a cost is still missing
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="chart" style="margin-top:1.25rem">
+    <div class="label">Now vs this scenario</div>
+    <div class="chart-legend">
+      <span><i class="swatch" style="background:#818cf8"></i>Now</span>
+      <span><i class="swatch" style="background:#0f172a"></i>If</span>
+    </div>
+    <div class="cols">
+      {% for row in comparison %}
+        <div class="col">
+          <div class="bars">
+            <span class="barbit now" style="height:{{ row.now_pct }}%" title="Now £{{ row.now|floatformat:2 }}"></span>
+            <span class="barbit then" style="height:{{ row.then_pct }}%" title="If £{{ row.then|floatformat:2 }}"></span>
+          </div>
+          <div class="x">{{ row.label }}</div>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <h2>Side by side</h2>
+  <table>
+    <thead>
+      <tr>
+        <th></th>
+        <th class="num">Now</th>
+        <th class="num">If</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Orders</td>
+        <td class="num">{{ result.baseline.orders }}</td>
+        <td class="num">{{ result.projected.orders }}</td>
+      </tr>
+      <tr>
+        <td>Units</td>
+        <td class="num">{{ result.baseline.units }}</td>
+        <td class="num">{{ result.projected.units }}</td>
+      </tr>
+      <tr>
+        <td>Net sales (incl. postage charged)</td>
+        <td class="num">£{{ result.baseline.net_revenue|floatformat:2 }}</td>
+        <td class="num">£{{ result.projected.net_revenue|floatformat:2 }}</td>
+      </tr>
+      <tr>
+        <td>Supplier cost</td>
+        <td class="num">{% if result.baseline.is_complete or result.baseline.supplier_cost %}£{{ result.baseline.supplier_cost|floatformat:2 }}{% else %}—{% endif %}</td>
+        <td class="num">{% if result.projected.is_complete or result.projected.lines_missing_cost == 0 %}£{{ result.projected.supplier_cost|floatformat:2 }}{% else %}—{% endif %}</td>
+      </tr>
+      <tr>
+        <td>Margin</td>
+        <td class="num">{% if result.baseline.margin_pct is not None %}{{ result.baseline.margin_pct|floatformat:1 }}%{% else %}—{% endif %}</td>
+        <td class="num">{% if result.projected.margin_pct is not None %}{{ result.projected.margin_pct|floatformat:1 }}%{% else %}—{% endif %}</td>
+      </tr>
+      <tr class="total">
+        <td>Contribution profit</td>
+        <td class="num">{% if result.baseline.is_complete %}£{{ result.baseline.profit|floatformat:2 }}{% else %}—{% endif %}</td>
+        <td class="num">{% if result.projected.is_complete %}£{{ result.projected.profit|floatformat:2 }}{% else %}—{% endif %}</td>
+      </tr>
+    </tbody>
+  </table>
+{% endblock %}
+
+{% block footer %}
+  Stage 6: simulations. Assumptions stay labelled. Missing costs stay unknown.
+{% endblock %}

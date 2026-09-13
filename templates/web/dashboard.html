@@ -1,0 +1,179 @@
+{% extends "web/base.html" %}
+{% load humanize %}
+
+{% block subtitle %}
+  {{ date_range.label }} · {{ date_range.start|date:"j M Y" }} – {{ date_range.end|date:"j M Y" }}
+{% endblock %}
+
+{% block content %}
+  {% include "web/_period.html" %}
+  {% include "web/_export.html" %}
+
+  <nav class="chips" aria-label="Salary and tithe">
+    <a class="{% if not include_drawings %}on{% endif %}" href="?{{ range_query }}{% if sort and sort != 'total' %}&amp;sort={{ sort }}{% endif %}">Profit / expenses excluding salary &amp; tithe</a>
+    <a class="{% if include_drawings %}on{% endif %}" href="?{{ range_query }}&amp;drawings=1{% if sort and sort != 'total' %}&amp;sort={{ sort }}{% endif %}">Include salary &amp; tithe</a>
+  </nav>
+
+  <div class="cards">
+    <div class="card">
+      <div class="label">Revenue</div>
+      <div class="value">£{{ metrics.revenue|floatformat:2 }}</div>
+      <div class="period">
+        net of refunds · from the bank
+        {% if year_ago.revenue_pct is not None %}
+          <span class="delta {% if year_ago.revenue_pct < 0 %}neg{% else %}pos{% endif %}">
+            {{ year_ago.revenue_pct|floatformat:0 }}% vs last year
+          </span>
+        {% endif %}
+      </div>
+    </div>
+    <div class="card">
+      <div class="label">{% if include_drawings %}Expenses{% else %}Expenses (exc. salary &amp; tithe){% endif %}</div>
+      <div class="value">£{{ displayed_expenses|floatformat:2 }}</div>
+      <div class="period">
+        {% if include_drawings %}
+          including salary and tithe
+        {% else %}
+          salary and tithe left out; supplier refunds reduce cost, not sales
+        {% endif %}
+      </div>
+    </div>
+    <div class="card">
+      <div class="label">{% if include_drawings %}Net profit{% else %}Profit (exc. salary &amp; tithe){% endif %}</div>
+      <div class="value {% if displayed_profit < 0 %}neg{% else %}pos{% endif %}">
+        £{{ displayed_profit|floatformat:2 }}
+      </div>
+      <div class="period">
+        {% if displayed_margin is not None %}{{ displayed_margin|floatformat:1 }}% margin{% else %}margin unknown{% endif %}
+        {% if year_ago.profit_pct is not None %}
+          · <span class="delta {% if year_ago.profit_pct < 0 %}neg{% else %}pos{% endif %}">
+            {{ year_ago.profit_pct|floatformat:0 }}% vs last year
+          </span>
+        {% endif %}
+      </div>
+    </div>
+    <div class="card">
+      <div class="label">Transactions</div>
+      <div class="value">{{ metrics.transaction_count|intcomma }}</div>
+      <div class="period">in this period</div>
+    </div>
+  </div>
+
+  {% if metrics.uncategorised_count %}
+    <div class="note">
+      <strong>{{ metrics.uncategorised_count }} transaction{{ metrics.uncategorised_count|pluralize }}</strong>
+      in this period {{ metrics.uncategorised_count|pluralize:"has,have" }} no category, so
+      {{ metrics.uncategorised_value|floatformat:2 }} is excluded from the figures above.
+      <a href="/admin/finance/banktransaction/?cat_status=missing">Review them</a>.
+    </div>
+  {% endif %}
+
+  <div class="chart" style="margin-top:1.25rem">
+    <div class="label">Profit and revenue over time</div>
+    <div class="chart-legend">
+      <span><i class="swatch" style="background:#15803d"></i>Profit{% if not include_drawings %} (exc. salary &amp; tithe){% endif %}</span>
+      <span><i class="swatch" style="background:#818cf8"></i>Revenue</span>
+    </div>
+    <svg class="line-chart" viewBox="0 0 {{ profit_line.width }} {{ profit_line.height }}" role="img" aria-label="Monthly profit and revenue">
+      <line class="grid" x1="22" y1="{{ profit_line.zero_y }}" x2="618" y2="{{ profit_line.zero_y }}"></line>
+      <polyline fill="none" stroke="#818cf8" stroke-width="2" points="{{ profit_line.series.revenue.polyline }}"></polyline>
+      <polyline fill="none" stroke="#15803d" stroke-width="2.4" points="{{ profit_line.series.profit.polyline }}"></polyline>
+      {% for point in profit_line.series.profit.points %}
+        <circle cx="{{ point.x }}" cy="{{ point.y }}" r="2.6" fill="#15803d">
+          <title>{{ point.label }} profit £{{ point.value }}</title>
+        </circle>
+      {% endfor %}
+    </svg>
+    <p class="period muted">From the bank. Shopify does not have to be synced for this line to work.</p>
+  </div>
+
+  <div class="charts two">
+    <div class="chart">
+      <div class="label">Monthly cash mix</div>
+      <div class="chart-legend">
+        <span><i class="swatch" style="background:#818cf8"></i>Revenue</span>
+        <span><i class="swatch" style="background:#cbd5e1"></i>Expenses</span>
+        <span><i class="swatch" style="background:#15803d"></i>Profit</span>
+      </div>
+      <div class="cols">
+        {% for month in months %}
+          <div class="col">
+            <div class="bars">
+              <span class="barbit rev" style="height:{{ month.revenue_pct }}%" title="Revenue £{{ month.revenue|floatformat:2 }}"></span>
+              <span class="barbit exp" style="height:{{ month.expenses_pct }}%" title="Expenses £{{ month.expenses|floatformat:2 }}"></span>
+              <span class="barbit profit {% if month.profit_neg %}neg{% endif %}" style="height:{{ month.profit_pct }}%" title="Profit £{{ month.profit|floatformat:2 }}"></span>
+            </div>
+            <div class="x">{{ month.label }}</div>
+          </div>
+        {% endfor %}
+      </div>
+      <p class="period muted">Same monthly view as the Finance Dashboard used to show, from Monzo.</p>
+    </div>
+    <div class="chart">
+      <div class="label">Where the money went</div>
+      {% for row in categories|slice:":8" %}
+        <div class="hbar">
+          <div class="name">{{ row.name }}</div>
+          <div class="track"><span style="width:{{ row.pct_of_total|default:0 }}%;background:{{ row.colour|default:'#818cf8' }}"></span></div>
+          <div class="n">{{ row.pct_of_total|floatformat:0 }}%</div>
+        </div>
+      {% empty %}
+        <p class="muted">No categorised spend in this period.</p>
+      {% endfor %}
+    </div>
+  </div>
+
+  <h2>Profit and loss</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Line</th>
+        <th class="num">Amount</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for label, value in rows %}
+        <tr {% if label == "Net profit" or label == "Contribution profit" or label == "Profit (exc. salary & tithe)" %}class="total"{% endif %}>
+          <td>{{ label }}</td>
+          <td class="num">{{ value }}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <p class="period muted">
+    These figures are <strong>cash</strong> from Monzo, not Shopify sales. Product-level
+    profit is on the Products page. Salary and tithe are owner distributions: they sit
+    below operating profit.
+  </p>
+
+  <h2>Every category</h2>
+  <table>
+    <thead>
+      <tr>
+        <th><a class="{% if sort == 'name' %}on{% endif %}" href="?{{ range_query }}&amp;sort=name{% if include_drawings %}&amp;drawings=1{% endif %}">Category</a></th>
+        <th><a class="{% if sort == 'kind' %}on{% endif %}" href="?{{ range_query }}&amp;sort=kind{% if include_drawings %}&amp;drawings=1{% endif %}">Treatment</a></th>
+        <th class="num"><a class="{% if sort == 'count' %}on{% endif %}" href="?{{ range_query }}&amp;sort=count{% if include_drawings %}&amp;drawings=1{% endif %}">Transactions</a></th>
+        <th class="num"><a class="{% if sort == 'total' %}on{% endif %}" href="?{{ range_query }}&amp;sort=total{% if include_drawings %}&amp;drawings=1{% endif %}">Total</a></th>
+        <th class="num"><a class="{% if sort == 'share' %}on{% endif %}" href="?{{ range_query }}&amp;sort=share{% if include_drawings %}&amp;drawings=1{% endif %}">Share</a></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in categories %}
+        <tr>
+          <td>{{ row.name }}</td>
+          <td class="muted">{{ row.kind }}</td>
+          <td class="num">{{ row.count|intcomma }}</td>
+          <td class="num {% if row.total < 0 %}neg{% else %}pos{% endif %}">{{ row.total|floatformat:2 }}</td>
+          <td class="num">
+            {% if row.pct_of_total is not None %}
+              {{ row.pct_of_total|floatformat:1 }}%
+              <span class="bar"><span style="width:{{ row.pct_of_total }}%;background:{{ row.colour|default:'#94a3b8' }}"></span></span>
+            {% else %}—{% endif %}
+          </td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="5" class="muted">No categorised transactions in this period.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endblock %}

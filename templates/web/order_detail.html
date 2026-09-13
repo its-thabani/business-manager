@@ -1,0 +1,80 @@
+{% extends "web/base.html" %}
+
+{% block subtitle %}{{ order.name }} · {{ order.placed_on|date:"j M Y" }}{% endblock %}
+
+{% block content %}
+  <p class="period"><a href="{% url 'web:orders' %}">← Orders</a>
+    · {{ order.financial_status }}
+    · {{ order.email|default:"" }}
+  </p>
+
+  <h2>Revenue</h2>
+  <table class="breakdown">
+    <tr><td>+ Product revenue</td><td class="num">£{{ profit.product_revenue }}</td></tr>
+    <tr><td>+ Shipping charged</td><td class="num">£{{ profit.shipping_charged }}</td></tr>
+    <tr><td>− Discounts</td><td class="num">£{{ profit.discounts }}</td></tr>
+    <tr><td>− Refunds</td><td class="num">£{{ profit.refunds }}</td></tr>
+    <tr><td>− Tax ({{ profit.tax_treatment }})</td><td class="num">£{{ profit.tax }}</td></tr>
+    <tr class="total"><td>Net sales</td><td class="num">£{{ profit.net_sales }}</td></tr>
+  </table>
+
+  <h2>Costs</h2>
+  <table class="breakdown">
+    <tr>
+      <td>− Inkthreadable product cost</td>
+      <td class="num">{% if profit.supplier_product_cost is not None %}{{ profit.supplier_product_cost }}{% else %}—{% endif %}</td>
+    </tr>
+    <tr>
+      <td>− Inkthreadable shipping</td>
+      <td class="num">{% if profit.supplier_shipping_cost is not None %}{{ profit.supplier_shipping_cost }}{% else %}—{% endif %}</td>
+    </tr>
+    <tr>
+      <td>− Payment fees <span class="muted">({{ profit.payment_fee_basis }})</span></td>
+      <td class="num">{% if profit.payment_fee is not None %}{{ profit.payment_fee }}{% else %}—{% endif %}</td>
+    </tr>
+    <tr class="total">
+      <td>Known costs</td>
+      <td class="num">{{ profit.total_costs }}</td>
+    </tr>
+    <tr class="total">
+      <td>Contribution profit</td>
+      <td class="num">
+        {% if profit.contribution_profit is not None %}{{ profit.contribution_profit }}{% else %}—{% endif %}
+      </td>
+    </tr>
+    <tr>
+      <td>Margin</td>
+      <td class="num">{% if profit.margin_pct is not None %}{{ profit.margin_pct }}%{% else %}—{% endif %}</td>
+    </tr>
+  </table>
+
+  {% if profit.warnings %}
+    <div class="note">
+      {% for warning in profit.warnings %}<div>{{ warning }}</div>{% endfor %}
+    </div>
+  {% endif %}
+
+  <h2>Lines</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Item</th>
+        <th>Variant</th>
+        <th class="num">Qty</th>
+        <th class="num">Net revenue</th>
+        <th class="num">Product cost</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for line in profit.lines %}
+        <tr>
+          <td>{{ line.line.title }}</td>
+          <td class="muted">{{ line.variant_label }}</td>
+          <td class="num">{{ line.quantity }}</td>
+          <td class="num">{{ line.net_revenue }}</td>
+          <td class="num">{% if line.product_cost is not None %}{{ line.product_cost }}{% else %}—{% endif %}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endblock %}

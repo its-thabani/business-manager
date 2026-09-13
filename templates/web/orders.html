@@ -1,0 +1,50 @@
+{% extends "web/base.html" %}
+{% load humanize %}
+
+{% block subtitle %}{{ shown }} of {{ total }} countable Shopify order{{ total|pluralize }}{% endblock %}
+
+{% block content %}
+  <h2>Orders</h2>
+  {% include "web/_export.html" %}
+  <nav class="chips" aria-label="Order filters">
+    <a class="{% if hide_free %}on{% endif %}" href="?sort={{ sort }}{% if hide_free %}&amp;hide_free=0{% endif %}">
+      {% if hide_free %}Hiding £0 / free downloads{% else %}Including £0 orders{% endif %}
+    </a>
+  </nav>
+  {% if hide_free and free_count %}
+    <p class="period muted">
+      {{ free_count }} order{{ free_count|pluralize }} at £0 hidden. These are digital
+      lead magnets (Bible verse downloads, templates) that Shopify recorded as free,
+      not missing prices.
+    </p>
+  {% endif %}
+  <table>
+    <thead>
+      <tr>
+        <th><a class="{% if sort == 'name' or sort == '-name' %}on{% endif %}" href="?sort={% if sort == 'name' %}-name{% else %}name{% endif %}{% if not hide_free %}&amp;hide_free=0{% endif %}">Order</a></th>
+        <th><a class="{% if sort == 'placed_on' or sort == '-placed_on' %}on{% endif %}" href="?sort={% if sort == '-placed_on' %}placed_on{% else %}-placed_on{% endif %}{% if not hide_free %}&amp;hide_free=0{% endif %}">Date</a></th>
+        <th>Customer</th>
+        <th>Status</th>
+        <th class="num"><a class="{% if sort == 'total_price' or sort == '-total_price' %}on{% endif %}" href="?sort={% if sort == '-total_price' %}total_price{% else %}-total_price{% endif %}{% if not hide_free %}&amp;hide_free=0{% endif %}">Total</a></th>
+        <th class="num">Profit</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for order in orders %}
+        <tr>
+          <td>
+            <a href="{% url 'web:order_detail' order.pk %}">{{ order.name }}</a>
+            {% if order.is_free %}<span class="pill">{% if order.is_digital %}free download{% else %}£0{% endif %}</span>{% endif %}
+          </td>
+          <td>{{ order.placed_on|date:"j M Y" }}</td>
+          <td class="muted">{{ order.customer|default:order.email|default:"—" }}</td>
+          <td class="muted">{{ order.financial_status }} · {{ order.fulfilment_status }}</td>
+          <td class="num">£{{ order.total_price }}</td>
+          <td class="num">{% if order.profit_complete %}£{{ order.contribution_profit }}{% else %}—{% endif %}</td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="6" class="muted">No orders match these filters. Update Shopify on Data health.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endblock %}

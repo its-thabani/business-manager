@@ -1,0 +1,80 @@
+{% extends "web/base.html" %}
+{% load humanize %}
+
+{% block subtitle %}
+  {{ group.name }} · {{ date_range.label }}
+{% endblock %}
+
+{% block content %}
+  <p><a href="{% url 'web:groups' %}?{{ range_query }}">← Groups</a></p>
+  {% include "web/_period.html" %}
+
+  <h2>{{ group.name }}</h2>
+  <p class="period muted">{{ group.products.count }} product{{ group.products.count|pluralize }} in this group.</p>
+
+  <div class="cards">
+    <div class="card">
+      <div class="label">Units</div>
+      <div class="value">{{ performance.units|intcomma }}</div>
+      <div class="period">{{ performance.orders|intcomma }} orders</div>
+    </div>
+    <div class="card">
+      <div class="label">Net sales</div>
+      <div class="value">£{{ performance.net_revenue|floatformat:2 }}</div>
+    </div>
+    <div class="card">
+      <div class="label">Contribution profit</div>
+      <div class="value {% if not performance.is_complete %}warn{% elif performance.profit < 0 %}neg{% else %}pos{% endif %}">
+        {% if performance.is_complete %}£{{ performance.profit|floatformat:2 }}{% else %}—{% endif %}
+      </div>
+      <div class="period">
+        {% if performance.is_complete and performance.margin_pct is not None %}
+          {{ performance.margin_pct|floatformat:1 }}% margin
+        {% else %}
+          withheld until every sold line has a cost
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <nav class="chips" aria-label="Table filters">
+    <a class="{% if hide_free %}on{% endif %}" href="?{{ range_query }}&amp;sort={{ sort }}{% if not hide_zero %}&amp;hide_zero=0{% endif %}{% if hide_free %}&amp;hide_free=0{% endif %}">
+      {% if hide_free %}Showing paid only{% else %}Include £0 / free downloads{% endif %}
+    </a>
+    <a class="{% if hide_zero %}on{% endif %}" href="?{{ range_query }}&amp;sort={{ sort }}{% if not hide_free %}&amp;hide_free=0{% endif %}{% if hide_zero %}&amp;hide_zero=0{% endif %}">
+      {% if hide_zero %}Hiding 0-order products{% else %}Include products with 0 orders{% endif %}
+    </a>
+  </nav>
+
+  <h2>Products in this group</h2>
+  <table>
+    <thead>
+      <tr>
+        <th><a class="{% if sort == 'name' %}on{% endif %}" href="?{{ range_query }}&amp;sort=name{% if not hide_free %}&amp;hide_free=0{% endif %}{% if not hide_zero %}&amp;hide_zero=0{% endif %}">Product</a></th>
+        <th class="num"><a class="{% if sort == 'orders' %}on{% endif %}" href="?{{ range_query }}&amp;sort=orders{% if not hide_free %}&amp;hide_free=0{% endif %}{% if not hide_zero %}&amp;hide_zero=0{% endif %}">Orders</a></th>
+        <th class="num"><a class="{% if sort == 'units' %}on{% endif %}" href="?{{ range_query }}&amp;sort=units{% if not hide_free %}&amp;hide_free=0{% endif %}{% if not hide_zero %}&amp;hide_zero=0{% endif %}">Units</a></th>
+        <th class="num"><a class="{% if sort == 'revenue' %}on{% endif %}" href="?{{ range_query }}&amp;sort=revenue{% if not hide_free %}&amp;hide_free=0{% endif %}{% if not hide_zero %}&amp;hide_zero=0{% endif %}">Net sales</a></th>
+        <th class="num"><a class="{% if sort == 'profit' %}on{% endif %}" href="?{{ range_query }}&amp;sort=profit{% if not hide_free %}&amp;hide_free=0{% endif %}{% if not hide_zero %}&amp;hide_zero=0{% endif %}">Profit</a></th>
+        <th class="num"><a class="{% if sort == 'margin' %}on{% endif %}" href="?{{ range_query }}&amp;sort=margin{% if not hide_free %}&amp;hide_free=0{% endif %}{% if not hide_zero %}&amp;hide_zero=0{% endif %}">Margin</a></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in products %}
+        <tr>
+          <td>
+            {% if row.product_id %}
+              <a href="{% url 'web:product_detail' row.product_id %}?{{ range_query }}">{{ row.label }}</a>
+            {% else %}{{ row.label }}{% endif %}
+          </td>
+          <td class="num">{{ row.orders|intcomma }}</td>
+          <td class="num">{{ row.units|intcomma }}</td>
+          <td class="num">£{{ row.net_revenue|floatformat:2 }}</td>
+          <td class="num">{% if row.is_complete %}£{{ row.profit|floatformat:2 }}{% else %}—{% endif %}</td>
+          <td class="num">{% if row.is_complete and row.margin_pct is not None %}{{ row.margin_pct|floatformat:1 }}%{% else %}—{% endif %}</td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="6" class="muted">No products in this group match the filters.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endblock %}

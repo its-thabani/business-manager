@@ -1,0 +1,56 @@
+{% extends "web/base.html" %}
+{% load humanize %}
+
+{% block subtitle %}{{ blank }}{% endblock %}
+
+{% block content %}
+  <p class="period">
+    <a href="{% url 'web:blank_list' %}">← Blanks</a>
+    · {{ blank.brand|default:"Inkthreadable" }}
+    {% if blank.supplier_id %}· {{ blank.supplier_id }}{% endif %}
+    {% if blank.last_synced_at %}· last seen {{ blank.last_synced_at|date:"j M Y" }}{% endif %}
+  </p>
+  {% if blank.is_discontinued %}
+    <div class="note">This blank is marked phased out. Historical unit costs stay so old orders still cost correctly.</div>
+  {% endif %}
+
+  {% if products %}
+    <h2>Assigned shop products</h2>
+    <table>
+      <tbody>
+        {% for product in products %}
+          <tr>
+            <td><a href="{% url 'web:mapping_detail' product.pk %}">{{ product.title }}</a></td>
+            <td class="muted"><a href="{% url 'web:product_detail' product.pk %}">Analytics</a></td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% endif %}
+
+  <h2>Supplier variants</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Colour</th>
+        <th>Size</th>
+        <th>SKU</th>
+        <th class="num">Current cost</th>
+        <th class="num">Mapped</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in variants %}
+        <tr>
+          <td>{{ row.variant.colour|default:"—" }}</td>
+          <td>{{ row.variant.size|default:"—" }}</td>
+          <td class="muted">{{ row.variant.sku|default:"—" }}</td>
+          <td class="num">{% if row.cost is not None %}£{{ row.cost }}{% else %}—{% endif %}</td>
+          <td class="num">{{ row.mapped }}</td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="5" class="muted">No variants on this blank yet.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endblock %}

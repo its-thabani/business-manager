@@ -1,0 +1,157 @@
+{% extends "web/base.html" %}
+{% load humanize %}
+
+{% block subtitle %}
+  {{ date_range.label }} · {{ date_range.start|date:"j M Y" }} – {{ date_range.end|date:"j M Y" }}
+{% endblock %}
+
+{% block content %}
+  {% include "web/_period.html" %}
+  {% include "web/_export.html" %}
+
+  <nav class="chips" aria-label="Refund filters">
+    <a class="{% if hide_digital %}on{% endif %}" href="?{{ range_query }}&amp;sort={{ sort }}&amp;vsort={{ vsort }}&amp;osort={{ osort }}{% if hide_zero %}{% else %}&amp;hide_zero=0{% endif %}{% if product_id %}&amp;product={{ product_id }}{% endif %}{% if hide_digital %}&amp;hide_digital=0{% endif %}">
+      {% if hide_digital %}Merchandise only{% else %}Including digital downloads{% endif %}
+    </a>
+    <a class="{% if hide_zero %}on{% endif %}" href="?{{ range_query }}&amp;sort={{ sort }}&amp;vsort={{ vsort }}&amp;osort={{ osort }}{% if hide_digital %}{% else %}&amp;hide_digital=0{% endif %}{% if product_id %}&amp;product={{ product_id }}{% endif %}{% if hide_zero %}&amp;hide_zero=0{% endif %}">
+      {% if hide_zero %}Returned products only{% else %}Every sold product{% endif %}
+    </a>
+    {% if product_id %}
+      <a class="on" href="?{{ range_query }}&amp;sort={{ sort }}&amp;vsort={{ vsort }}&amp;osort={{ osort }}{% if not hide_digital %}&amp;hide_digital=0{% endif %}{% if not hide_zero %}&amp;hide_zero=0{% endif %}">{{ product_label }} · clear</a>
+    {% endif %}
+  </nav>
+
+  <div class="cards">
+    <div class="card">
+      <div class="label">Refunded</div>
+      <div class="value">£{{ metrics.amount|floatformat:2 }}</div>
+      <div class="period">
+        {% if metrics.of_sales_pct is not None %}{{ metrics.of_sales_pct|floatformat:1 }}% of what customers paid{% else %}no sales{% endif %}
+        {% if metrics.unallocated %} · £{{ metrics.unallocated|floatformat:2 }} with no line{% endif %}
+      </div>
+    </div>
+    <div class="card">
+      <div class="label">Orders</div>
+      <div class="value">{{ metrics.refunded_orders|intcomma }}</div>
+      <div class="period">
+        {% if metrics.order_rate_pct is not None %}{{ metrics.order_rate_pct|floatformat:0 }}% of {{ metrics.universe|intcomma }} order{{ metrics.universe|pluralize }}{% else %}no orders{% endif %}
+      </div>
+    </div>
+    <div class="card">
+      <div class="label">Unit rate</div>
+      <div class="value">{% if metrics.unit_rate_pct is not None %}{{ metrics.unit_rate_pct|floatformat:1 }}%{% else %}—{% endif %}</div>
+      <div class="period">
+        {{ metrics.refunded_units|floatformat:0 }} of {{ metrics.sold_units|floatformat:0 }} unit{{ metrics.sold_units|pluralize }}
+      </div>
+    </div>
+    <div class="card">
+      <div class="label">Refund events</div>
+      <div class="value">{{ metrics.rows|length|intcomma }}</div>
+      <div class="period">against sales in this period · print cost is not recovered</div>
+    </div>
+  </div>
+
+  <p class="period muted">
+    Rates are of what was sold in this period, not of refunds dated here.
+    Cash is Shopify's refund total. Line amounts that disagree are only a share.
+    {% if hide_digital %}{{ metrics.digital }} digital download{{ metrics.digital|pluralize }} hidden.{% endif %}
+  </p>
+
+  <div class="chart" style="margin-top:1.25rem">
+    <div class="label">Refunds on sales in each month</div>
+    <div class="cols">
+      {% for month in months %}
+        <div class="col">
+          <div class="bars">
+            <span class="barbit rev" style="height:{{ month.amount_pct }}%" title="£{{ month.amount|floatformat:2 }} · {{ month.refunds }} refund{{ month.refunds|pluralize }}"></span>
+          </div>
+          <div class="x">{{ month.label }}</div>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <h2>By product</h2>
+  <table>
+    <thead>
+      <tr>
+        <th><a class="{% if sort == 'name' %}on{% endif %}" href="?{{ range_query }}&amp;sort=name&amp;vsort={{ vsort }}&amp;osort={{ osort }}{% if product_id %}&amp;product={{ product_id }}{% endif %}{% if not hide_digital %}&amp;hide_digital=0{% endif %}{% if not hide_zero %}&amp;hide_zero=0{% endif %}">Product</a></th>
+        <th class="num"><a class="{% if sort == 'units' %}on{% endif %}" href="?{{ range_query }}&amp;sort=units&amp;vsort={{ vsort }}&amp;osort={{ osort }}{% if product_id %}&amp;product={{ product_id }}{% endif %}{% if not hide_digital %}&amp;hide_digital=0{% endif %}{% if not hide_zero %}&amp;hide_zero=0{% endif %}">Sold</a></th>
+        <th class="num"><a class="{% if sort == 'refunded' %}on{% endif %}" href="?{{ range_query }}&amp;sort=refunded&amp;vsort={{ vsort }}&amp;osort={{ osort }}{% if product_id %}&amp;product={{ product_id }}{% endif %}{% if not hide_digital %}&amp;hide_digital=0{% endif %}{% if not hide_zero %}&amp;hide_zero=0{% endif %}">Returned</a></th>
+        <th class="num"><a class="{% if sort == 'rate' %}on{% endif %}" href="?{{ range_query }}&amp;sort=rate&amp;vsort={{ vsort }}&amp;osort={{ osort }}{% if product_id %}&amp;product={{ product_id }}{% endif %}{% if not hide_digital %}&amp;hide_digital=0{% endif %}{% if not hide_zero %}&amp;hide_zero=0{% endif %}">Rate</a></th>
+        <th class="num"><a class="{% if sort == 'amount' %}on{% endif %}" href="?{{ range_query }}&amp;sort=amount&amp;vsort={{ vsort }}&amp;osort={{ osort }}{% if product_id %}&amp;product={{ product_id }}{% endif %}{% if not hide_digital %}&amp;hide_digital=0{% endif %}{% if not hide_zero %}&amp;hide_zero=0{% endif %}">Cash</a></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in products %}
+        <tr>
+          <td>
+            {% if row.product_id %}
+              <a href="?{{ range_query }}&amp;sort={{ sort }}&amp;vsort={{ vsort }}&amp;osort={{ osort }}&amp;product={{ row.product_id }}{% if not hide_digital %}&amp;hide_digital=0{% endif %}{% if not hide_zero %}&amp;hide_zero=0{% endif %}">{{ row.label }}</a>
+            {% else %}{{ row.label }}{% endif %}
+          </td>
+          <td class="num">{{ row.sold_units|floatformat:0 }}</td>
+          <td class="num">{{ row.refunded_units|floatformat:0 }}</td>
+          <td class="num">{% if row.rate_pct is not None %}{{ row.rate_pct|floatformat:1 }}%{% else %}—{% endif %}</td>
+          <td class="num">£{{ row.amount|floatformat:2 }}</td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="5" class="muted">No refunds on sales in this period.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <h2>By variant</h2>
+  <table>
+    <thead>
+      <tr>
+        <th><a class="{% if vsort == 'name' %}on{% endif %}" href="?{{ range_query }}&amp;sort={{ sort }}&amp;vsort=name&amp;osort={{ osort }}{% if product_id %}&amp;product={{ product_id }}{% endif %}{% if not hide_digital %}&amp;hide_digital=0{% endif %}{% if not hide_zero %}&amp;hide_zero=0{% endif %}">Variant</a></th>
+        <th class="num"><a class="{% if vsort == 'units' %}on{% endif %}" href="?{{ range_query }}&amp;sort={{ sort }}&amp;vsort=units&amp;osort={{ osort }}{% if product_id %}&amp;product={{ product_id }}{% endif %}{% if not hide_digital %}&amp;hide_digital=0{% endif %}{% if not hide_zero %}&amp;hide_zero=0{% endif %}">Sold</a></th>
+        <th class="num"><a class="{% if vsort == 'refunded' %}on{% endif %}" href="?{{ range_query }}&amp;sort={{ sort }}&amp;vsort=refunded&amp;osort={{ osort }}{% if product_id %}&amp;product={{ product_id }}{% endif %}{% if not hide_digital %}&amp;hide_digital=0{% endif %}{% if not hide_zero %}&amp;hide_zero=0{% endif %}">Returned</a></th>
+        <th class="num"><a class="{% if vsort == 'rate' %}on{% endif %}" href="?{{ range_query }}&amp;sort={{ sort }}&amp;vsort=rate&amp;osort={{ osort }}{% if product_id %}&amp;product={{ product_id }}{% endif %}{% if not hide_digital %}&amp;hide_digital=0{% endif %}{% if not hide_zero %}&amp;hide_zero=0{% endif %}">Rate</a></th>
+        <th class="num"><a class="{% if vsort == 'amount' %}on{% endif %}" href="?{{ range_query }}&amp;sort={{ sort }}&amp;vsort=amount&amp;osort={{ osort }}{% if product_id %}&amp;product={{ product_id }}{% endif %}{% if not hide_digital %}&amp;hide_digital=0{% endif %}{% if not hide_zero %}&amp;hide_zero=0{% endif %}">Cash</a></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in variants %}
+        <tr>
+          <td>{{ row.label }}</td>
+          <td class="num">{{ row.sold_units|floatformat:0 }}</td>
+          <td class="num">{{ row.refunded_units|floatformat:0 }}</td>
+          <td class="num">{% if row.rate_pct is not None %}{{ row.rate_pct|floatformat:1 }}%{% else %}—{% endif %}</td>
+          <td class="num">£{{ row.amount|floatformat:2 }}</td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="5" class="muted">No returned variants{% if product_id %} for this product{% endif %}.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <h2>Refunds</h2>
+  <table>
+    <thead>
+      <tr>
+        <th><a class="{% if osort == 'name' %}on{% endif %}" href="?{{ range_query }}&amp;sort={{ sort }}&amp;vsort={{ vsort }}&amp;osort=name{% if product_id %}&amp;product={{ product_id }}{% endif %}{% if not hide_digital %}&amp;hide_digital=0{% endif %}{% if not hide_zero %}&amp;hide_zero=0{% endif %}">Order</a></th>
+        <th><a class="{% if osort == 'placed' %}on{% endif %}" href="?{{ range_query }}&amp;sort={{ sort }}&amp;vsort={{ vsort }}&amp;osort=placed{% if product_id %}&amp;product={{ product_id }}{% endif %}{% if not hide_digital %}&amp;hide_digital=0{% endif %}{% if not hide_zero %}&amp;hide_zero=0{% endif %}">Sold</a></th>
+        <th><a class="{% if osort == 'date' %}on{% endif %}" href="?{{ range_query }}&amp;sort={{ sort }}&amp;vsort={{ vsort }}&amp;osort=date{% if product_id %}&amp;product={{ product_id }}{% endif %}{% if not hide_digital %}&amp;hide_digital=0{% endif %}{% if not hide_zero %}&amp;hide_zero=0{% endif %}">Refunded</a></th>
+        <th>Products</th>
+        <th class="num"><a class="{% if osort == 'units' %}on{% endif %}" href="?{{ range_query }}&amp;sort={{ sort }}&amp;vsort={{ vsort }}&amp;osort=units{% if product_id %}&amp;product={{ product_id }}{% endif %}{% if not hide_digital %}&amp;hide_digital=0{% endif %}{% if not hide_zero %}&amp;hide_zero=0{% endif %}">Units</a></th>
+        <th class="num"><a class="{% if osort == 'amount' %}on{% endif %}" href="?{{ range_query }}&amp;sort={{ sort }}&amp;vsort={{ vsort }}&amp;osort=amount{% if product_id %}&amp;product={{ product_id }}{% endif %}{% if not hide_digital %}&amp;hide_digital=0{% endif %}{% if not hide_zero %}&amp;hide_zero=0{% endif %}">Cash</a></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in refunds %}
+        <tr>
+          <td><a href="{% url 'web:order_detail' row.order_id %}">{{ row.name }}</a></td>
+          <td>{{ row.placed_on|date:"j M Y" }}</td>
+          <td>{{ row.refunded_on|date:"j M Y" }}</td>
+          <td>{{ row.products }}</td>
+          <td class="num">{{ row.units|floatformat:0 }}</td>
+          <td class="num">£{{ row.amount|floatformat:2 }}</td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="6" class="muted">No refunds on sales in this period.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endblock %}

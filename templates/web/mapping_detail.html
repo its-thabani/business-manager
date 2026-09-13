@@ -1,0 +1,223 @@
+{% extends "web/base.html" %}
+{% load humanize %}
+
+{% block subtitle %}{{ product.title }}{% endblock %}
+
+{% block content %}
+  <p class="period">
+    <a href="{% url 'web:mapping_list' %}">← Mapping</a>
+    · <a href="{% url 'web:product_detail' product.pk %}">Product page</a>
+    · {{ product.product_type|default:"no type" }}
+  </p>
+
+  <h2>This product</h2>
+  <div class="card">
+    {% if mapping.no_supplier %}
+      <p>Marked as <strong>digital / no supplier</strong>. Product cost is £0, not unknown.</p>
+    {% elif mapping.supplier_product %}
+      <p>Printed on <strong>{{ mapping.supplier_product }}</strong>
+        <span class="pill {% if mapping.is_confirmed %}good{% else %}warn{% endif %}">{{ mapping.confidence }}</span>
+        {% if mapping.supplier_product.is_discontinued %}
+          <span class="pill warn">phased out</span>
+        {% endif %}
+      </p>
+      {% if mapping.supplier_product.is_discontinued %}
+        <p class="note">Inkthreadable has phased this blank out. Historical costs stay;
+        new orders should not assume it is still available.</p>
+      {% endif %}
+    {% else %}
+      <p>No blank assigned yet.
+        {% if suggestion.no_supplier %}
+          Suggestion: <span class="pill warn">digital</span> — {{ suggestion.reason }}
+        {% elif suggestion.supplier_product %}
+          Suggestion: <strong>{{ suggestion.supplier_product }}</strong> — {{ suggestion.reason }}
+        {% endif %}
+      </p>
+    {% endif %}
+    {% if mapping.match_reason %}<p class="muted">{{ mapping.match_reason }}</p>{% endif %}
+
+    <div class="actions">
+      <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="set_blank">
+        <select name="supplier_product_id" required>
+          <option value="">Assign a blank…</option>
+          {% for blank in blanks %}
+            <option value="{{ blank.pk }}" {% if mapping.supplier_product_id == blank.pk %}selected{% endif %}>
+              {{ blank }} ({{ blank.variant_count }} variants)
+            </option>
+          {% endfor %}
+        </select>
+        <button class="btn btn-primary" type="submit">Set blank</button>
+      </form>
+      <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="mark_digital">
+        <button class="btn" type="submit">Digital / no supplier</button>
+      </form>
+      <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="apply_suggestions">
+        <button class="btn" type="submit">Apply suggestions</button>
+      </form>
+      {% if mapping %}
+        <form method="post">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="confirm_all">
+          <button class="btn btn-primary" type="submit">Confirm all</button>
+        </form>
+        <form method="post">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="clear_product">
+          <button class="btn btn-danger" type="submit">Clear product mapping</button>
+        </form>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if not mapping.no_supplier %}
+    <h2>Blank missing from the catalogue?</h2>
+    <div class="card">
+      <p class="muted">Use this for garments Inkthreadable has never invoiced, so they never appeared in a sync — e.g. AT002 tees.</p>
+      <form method="post" class="actions">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="create_blank">
+        <div>
+          <label for="blank-name">Name</label>
+          <input id="blank-name" type="text" name="name" placeholder="AWDis T-Shirt" required>
+        </div>
+        <div>
+          <label for="blank-id">Code</label>
+          <input id="blank-id" type="text" name="supplier_id" placeholder="AT002">
+        </div>
+        <div>
+          <label for="blank-brand">Brand</label>
+          <input id="blank-brand" type="text" name="brand" placeholder="AWDis">
+        </div>
+        <button class="btn" type="submit">Create blank and assign</button>
+      </form>
+      {% if mapping.supplier_product %}
+        <form method="post" class="actions">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="create_missing">
+          <div>
+            <label for="missing-cost">Create every missing size/colour at this unit cost</label>
+            <input id="missing-cost" type="text" name="unit_cost" placeholder="8.10" inputmode="decimal">
+          </div>
+          <button class="btn" type="submit">Create missing variants</button>
+        </form>
+      {% endif %}
+    </div>
+  {% endif %}
+
+  <h2>Variants</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Shop variant</th>
+        <th>SKU</th>
+        <th class="num">Sold</th>
+        <th>Supplier variant</th>
+        <th class="num">Cost</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in variant_rows %}
+        <tr>
+          <td>
+            {{ row.variant.display_options }}
+            <div class="muted">{{ row.variant.colour|default:"" }} {{ row.variant.size|default:"" }}</div>
+          </td>
+          <td class="muted">{{ row.variant.sku|default:"—" }}</td>
+          <td class="num">{{ row.units|intcomma }}</td>
+          <td>
+            {% if mapping.no_supplier %}
+              <span class="pill good">n/a</span>
+            {% elif row.mapping %}
+              {{ row.mapping.supplier_variant }}
+              <div>
+                <span class="pill {% if row.mapping.is_confirmed %}good{% else %}warn{% endif %}">
+                  {{ row.mapping.confidence }}
+                </span>
+                {% if row.mapping.match_reason %}<span class="muted">{{ row.mapping.match_reason }}</span>{% endif %}
+              </div>
+            {% elif row.suggestion.supplier_variant %}
+              <span class="muted">Suggested: {{ row.suggestion.supplier_variant }} ({{ row.suggestion.reason }})</span>
+            {% else %}
+              <span class="muted">{{ row.suggestion.reason|default:"no match" }}</span>
+            {% endif %}
+          </td>
+          <td class="num">
+            {% if mapping.no_supplier %}£0.00
+            {% elif row.cost is not None %}{{ row.cost }}
+            {% else %}—{% endif %}
+          </td>
+          <td>
+            {% if not mapping.no_supplier %}
+              <div class="stack">
+                {% if row.mapping and not row.mapping.is_confirmed %}
+                  <form method="post" class="inline">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="confirm_variant">
+                    <input type="hidden" name="variant_id" value="{{ row.variant.pk }}">
+                    <button class="btn btn-primary" type="submit">Confirm</button>
+                  </form>
+                {% endif %}
+                {% if supplier_variants %}
+                  <form method="post" class="inline">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="set_variant">
+                    <input type="hidden" name="variant_id" value="{{ row.variant.pk }}">
+                    <select name="supplier_variant_id" required>
+                      <option value="">Change…</option>
+                      {% for item in supplier_variants %}
+                        <option value="{{ item.pk }}" {% if row.mapping.supplier_variant_id == item.pk %}selected{% endif %}>
+                          {{ item.colour }} / {{ item.size }} {{ item.sku }}
+                        </option>
+                      {% endfor %}
+                    </select>
+                    <button class="btn" type="submit">Set</button>
+                  </form>
+                {% endif %}
+                {% if row.mapping %}
+                  <form method="post" class="inline">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="set_override">
+                    <input type="hidden" name="variant_id" value="{{ row.variant.pk }}">
+                    <input type="text" name="cost_override" placeholder="override £" inputmode="decimal" size="6">
+                    <button class="btn" type="submit">Override</button>
+                  </form>
+                  {% if row.mapping.cost_override is not None %}
+                    <form method="post" class="inline">
+                      {% csrf_token %}
+                      <input type="hidden" name="action" value="clear_override">
+                      <input type="hidden" name="variant_id" value="{{ row.variant.pk }}">
+                      <button class="btn" type="submit">Clear override</button>
+                    </form>
+                  {% endif %}
+                  <form method="post" class="inline">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="clear_variant">
+                    <input type="hidden" name="variant_id" value="{{ row.variant.pk }}">
+                    <button class="btn btn-danger" type="submit">Clear</button>
+                  </form>
+                {% elif mapping.supplier_product %}
+                  <form method="post" class="inline">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="create_variant">
+                    <input type="hidden" name="variant_id" value="{{ row.variant.pk }}">
+                    <input type="text" name="unit_cost" placeholder="£ cost" inputmode="decimal" size="6">
+                    <button class="btn" type="submit">Create this variant</button>
+                  </form>
+                {% endif %}
+              </div>
+            {% endif %}
+          </td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="6" class="muted">No variants on this product.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endblock %}

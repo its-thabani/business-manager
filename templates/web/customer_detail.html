@@ -1,0 +1,58 @@
+{% extends "web/base.html" %}
+{% load humanize %}
+
+{% block subtitle %}{{ customer }}{% endblock %}
+
+{% block content %}
+  <p class="period"><a href="{% url 'web:customers' %}?{{ range_query }}{% if not hide_free %}&amp;hide_free=0{% endif %}">← Customers</a></p>
+  {% include "web/_period.html" %}
+
+  <h2>{{ customer }}</h2>
+  <p class="muted">
+    {{ customer.email|default:"No email" }}
+    {% if customer.country %} · {{ customer.country }}{% endif %}
+    · {% if is_new %}<span class="pill">new in this period</span>{% else %}<span class="pill good">returning</span>{% endif %}
+  </p>
+
+  <div class="cards">
+    <div class="card">
+      <div class="label">Orders this period</div>
+      <div class="value">{{ period_orders }}</div>
+      <div class="period">£{{ period_spend|floatformat:2 }}</div>
+    </div>
+    <div class="card">
+      <div class="label">Lifetime paid orders</div>
+      <div class="value">{{ lifetime_orders }}</div>
+      <div class="period">£{{ lifetime_spend|floatformat:2 }}</div>
+    </div>
+    <div class="card">
+      <div class="label">First paid order</div>
+      <div class="value" style="font-size:1.15rem">
+        {% if first_order %}{{ first_order.placed_on|date:"j M Y" }}{% else %}—{% endif %}
+      </div>
+      <div class="period">{% if first_order %}{{ first_order.name }}{% endif %}</div>
+    </div>
+  </div>
+
+  <h2>Orders</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Order</th>
+        <th>Date</th>
+        <th class="num">Total</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for order in orders %}
+        <tr>
+          <td><a href="{% url 'web:order_detail' order.pk %}">{{ order.name }}</a></td>
+          <td>{{ order.placed_on|date:"j M Y" }}</td>
+          <td class="num">£{{ order.total_price }}</td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="3" class="muted">No matching orders in the books.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endblock %}

@@ -1,0 +1,61 @@
+{% extends "web/base.html" %}
+{% load humanize %}
+
+{% block subtitle %}
+  {{ date_range.label }} · {{ date_range.start|date:"j M Y" }} – {{ date_range.end|date:"j M Y" }}
+{% endblock %}
+
+{% block content %}
+  {% include "web/_period.html" %}
+  {% include "web/_export.html" %}
+
+  <nav class="chips" aria-label="Group filters">
+    <a class="{% if hide_free %}on{% endif %}" href="?{{ range_query }}&amp;sort={{ sort }}{% if hide_free %}&amp;hide_free=0{% endif %}">
+      {% if hide_free %}Hiding empty digital-only groups{% else %}Including empty groups{% endif %}
+    </a>
+  </nav>
+
+  <p class="period muted">
+    Shopify did not send a product type, so groups are filled from the title
+    (hoodie, t-shirt, sweatshirt, …). A product can sit in more than one group.
+    {% if ungrouped %}{{ ungrouped }} product{{ ungrouped|pluralize }} still ungrouped.{% endif %}
+    Membership is edited in <a href="/admin/catalog/productgroup/">admin</a>.
+  </p>
+
+  <table>
+    <thead>
+      <tr>
+        <th><a class="{% if sort == 'name' %}on{% endif %}" href="?{{ range_query }}&amp;sort=name{% if not hide_free %}&amp;hide_free=0{% endif %}">Group</a></th>
+        <th class="num">Members</th>
+        <th class="num"><a class="{% if sort == 'orders' %}on{% endif %}" href="?{{ range_query }}&amp;sort=orders{% if not hide_free %}&amp;hide_free=0{% endif %}">Orders</a></th>
+        <th class="num"><a class="{% if sort == 'units' %}on{% endif %}" href="?{{ range_query }}&amp;sort=units{% if not hide_free %}&amp;hide_free=0{% endif %}">Units</a></th>
+        <th class="num"><a class="{% if sort == 'revenue' %}on{% endif %}" href="?{{ range_query }}&amp;sort=revenue{% if not hide_free %}&amp;hide_free=0{% endif %}">Net sales</a></th>
+        <th class="num"><a class="{% if sort == 'profit' %}on{% endif %}" href="?{{ range_query }}&amp;sort=profit{% if not hide_free %}&amp;hide_free=0{% endif %}">Profit</a></th>
+        <th class="num"><a class="{% if sort == 'margin' %}on{% endif %}" href="?{{ range_query }}&amp;sort=margin{% if not hide_free %}&amp;hide_free=0{% endif %}">Margin</a></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in groups %}
+        <tr>
+          <td>
+            {% if row.group_id %}
+              <a href="{% url 'web:group_detail' row.group_id %}?{{ range_query }}">{{ row.label }}</a>
+            {% else %}{{ row.label }}{% endif %}
+          </td>
+          <td class="num">{{ row.members|default:0 }}</td>
+          <td class="num">{{ row.orders|intcomma }}</td>
+          <td class="num">{{ row.units|intcomma }}</td>
+          <td class="num">£{{ row.net_revenue|floatformat:2 }}</td>
+          <td class="num">
+            {% if row.is_complete %}
+              <span class="{% if row.profit < 0 %}neg{% else %}pos{% endif %}">£{{ row.profit|floatformat:2 }}</span>
+            {% else %}—{% endif %}
+          </td>
+          <td class="num">{% if row.is_complete and row.margin_pct is not None %}{{ row.margin_pct|floatformat:1 }}%{% else %}—{% endif %}</td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="7" class="muted">No groups yet.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endblock %}

@@ -1,0 +1,306 @@
+{% extends "web/base.html" %}
+{% load humanize %}
+
+{% block subtitle %}
+  {{ date_range.label }} · {{ date_range.start|date:"j M Y" }} – {{ date_range.end|date:"j M Y" }}
+{% endblock %}
+
+{% block content %}
+  {% include "web/_period.html" %}
+  <p class="period muted">
+    Shopify opened on 16 Jul 2025 (order #1001). Bank activity before that is from the
+    Wix storefront and will not match Shopify payouts.
+  </p>
+
+  <div class="cards">
+    <div class="card">
+      <div class="label">Shopify net sales</div>
+      <div class="value">£{{ report.shopify_net_sales|floatformat:2 }}</div>
+      <div class="period">after discounts and refunds</div>
+    </div>
+    <div class="card">
+      <div class="label">Expected after fees</div>
+      <div class="value">£{{ report.expected_cash|floatformat:2 }}</div>
+      <div class="period">fees £{{ report.shopify_fees|floatformat:2 }}</div>
+    </div>
+    <div class="card">
+      <div class="label">Bank received</div>
+      <div class="value">£{{ report.bank_received|floatformat:2 }}</div>
+      <div class="period">Stripe / Adyen in this period</div>
+    </div>
+    <div class="card">
+      <div class="label">Cash gap</div>
+      <div class="value {% if report.cash_gap > 0 %}warn{% elif report.cash_gap < 0 %}neg{% else %}pos{% endif %}">
+        {% if report.cash_gap > 0 %}+{% endif %}£{{ report.cash_gap|floatformat:2 }}
+      </div>
+      <div class="period">{% if report.cash_gap > 0 %}sales not yet in the bank{% elif report.cash_gap < 0 %}bank ahead of this period's sales{% else %}in step{% endif %}</div>
+    </div>
+  </div>
+
+  <div class="cards">
+    <div class="card">
+      <div class="label">Inkthreadable left the bank</div>
+      <div class="value">£{{ report.supplier_bank|floatformat:2 }}</div>
+      <div class="period">{{ report.unmatched_charges|length }} unmatched charge{{ report.unmatched_charges|length|pluralize }}</div>
+    </div>
+    <div class="card">
+      <div class="label">Supplier invoices</div>
+      <div class="value">
+        {% if report.supplier_invoices is not None %}£{{ report.supplier_invoices|floatformat:2 }}{% else %}—{% endif %}
+      </div>
+      <div class="period">
+        {% if report.supplier_invoice_count %}{{ report.supplier_invoice_count }} in this period{% elif report.invoice_span %}none here · invoices {{ report.invoice_span }}{% else %}none synced{% endif %}
+      </div>
+    </div>
+    <div class="card">
+      <div class="label">Estimated fulfilment</div>
+      <div class="value">
+        {% if report.estimated_fulfilment is not None %}£{{ report.estimated_fulfilment|floatformat:2 }}{% else %}—{% endif %}
+      </div>
+      <div class="period">
+        {% if report.fulfilment_coverage_pct is not None %}{{ report.fulfilment_coverage_pct|floatformat:0 }}% of sold lines have a cost{% else %}from mapped products{% endif %}
+      </div>
+    </div>
+    <div class="card">
+      <div class="label">Matched payouts</div>
+      <div class="value">{{ report.shopify_matches|length }}</div>
+      <div class="period">{{ report.unmatched_payouts|length }} unmatched · {{ report.unmatched_days|length }} sales day{{ report.unmatched_days|length|pluralize }} open</div>
+    </div>
+  </div>
+
+  {% for note in report.notes %}
+    <div class="note">{{ note }}</div>
+  {% endfor %}
+
+  <div class="chart" style="margin-top:1.25rem">
+    <div class="label">Monthly sales vs payouts vs supplier spend</div>
+    <div class="chart-legend">
+      <span><i class="swatch" style="background:#818cf8"></i>Expected cash</span>
+      <span><i class="swatch" style="background:#0ea5e9"></i>Bank payouts</span>
+      <span><i class="swatch" style="background:#f59e0b"></i>Inkthreadable</span>
+    </div>
+    <div class="cols">
+      {% for month in months %}
+        <div class="col">
+          <div class="bars">
+            <span class="barbit rev" style="height:{{ month.expected_pct }}%" title="Expected £{{ month.expected|floatformat:2 }}"></span>
+            <span class="barbit payout" style="height:{{ month.payouts_pct }}%" title="Payouts £{{ month.payouts|floatformat:2 }}"></span>
+            <span class="barbit supplier" style="height:{{ month.supplier_pct }}%" title="Inkthreadable £{{ month.supplier|floatformat:2 }}"></span>
+          </div>
+          <div class="x">{{ month.label }}</div>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="actions">
+    <form method="post">{% csrf_token %}
+      <input type="hidden" name="action" value="suggest">
+      <button class="btn" type="submit">Save suggestions</button>
+    </form>
+    <form method="post">{% csrf_token %}
+      <input type="hidden" name="action" value="confirm_all">
+      <button class="btn btn-primary" type="submit">Confirm all suggestions</button>
+    </form>
+  </div>
+
+  <h2>Shopify → Stripe / Adyen</h2>
+  {% if report.shopify_matches %}
+    <table>
+      <thead>
+        <tr>
+          <th>Sales day</th>
+          <th>Banked</th>
+          <th class="num">Expected</th>
+          <th class="num">Bank</th>
+          <th class="num">Δ</th>
+          <th>Status</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in report.shopify_matches %}
+          <tr>
+            <td>
+              {% for day in row.sale_dates %}
+                {{ day|date:"j M Y" }}{% if not forloop.last %}, {% endif %}
+              {% endfor %}
+            </td>
+            <td>{{ row.bank_transaction.occurred_on|date:"j M Y" }} · {{ row.bank_transaction.counterparty }}</td>
+            <td class="num">£{{ row.expected_amount|floatformat:2 }}</td>
+            <td class="num">£{{ row.bank_transaction.amount|floatformat:2 }}</td>
+            <td class="num">{% if row.difference %}£{{ row.difference|floatformat:2 }}{% else %}—{% endif %}</td>
+            <td>
+              {% if row.is_confirmed %}<span class="pill good">confirmed</span>{% else %}<span class="pill warn">suggested</span>{% endif %}
+              <div class="muted" style="font-size:.78rem">{{ row.reason }}</div>
+            </td>
+            <td>
+              {% if row.persisted %}
+                {% if not row.is_confirmed %}
+                  <form class="inline" method="post">{% csrf_token %}
+                    <input type="hidden" name="action" value="confirm">
+                    <input type="hidden" name="link_id" value="{{ row.persisted.pk }}">
+                    <button class="btn" type="submit">Confirm</button>
+                  </form>
+                {% endif %}
+                <form class="inline" method="post">{% csrf_token %}
+                  <input type="hidden" name="action" value="clear">
+                  <input type="hidden" name="link_id" value="{{ row.persisted.pk }}">
+                  <button class="btn btn-danger" type="submit">Clear</button>
+                </form>
+              {% else %}
+                <form class="inline" method="post">{% csrf_token %}
+                  <input type="hidden" name="action" value="confirm">
+                  <input type="hidden" name="transaction_id" value="{{ row.bank_transaction.pk }}">
+                  <input type="hidden" name="kind" value="{{ row.kind }}">
+                  <button class="btn" type="submit">Confirm</button>
+                </form>
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p class="muted">No sales day matched a payout in this period.</p>
+  {% endif %}
+
+  {% if report.unmatched_days %}
+    <h2>Unmatched sales days</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Day</th>
+          <th class="num">Orders</th>
+          <th class="num">Net sales</th>
+          <th class="num">Fees</th>
+          <th class="num">Expected cash</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for day in report.unmatched_days|slice:":40" %}
+          <tr>
+            <td>{{ day.sale_on|date:"j M Y" }}</td>
+            <td class="num">{{ day.order_count }}</td>
+            <td class="num">£{{ day.net_sales|floatformat:2 }}</td>
+            <td class="num">£{{ day.payment_fees|floatformat:2 }}</td>
+            <td class="num">£{{ day.expected_cash|floatformat:2 }}</td>
+          </tr>
+        {% endfor %}
+        {% if report.unmatched_days|length > 40 %}
+          <tr class="total"><td colspan="5" class="muted">Showing 40 of {{ report.unmatched_days|length }} unmatched sales days.</td></tr>
+        {% endif %}
+      </tbody>
+    </table>
+  {% endif %}
+
+  {% if report.unmatched_payouts %}
+    <h2>Unmatched payouts</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Counterparty</th>
+          <th class="num">Amount</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in report.unmatched_payouts|slice:":40" %}
+          <tr>
+            <td>{{ row.occurred_on|date:"j M Y" }}</td>
+            <td>{{ row.counterparty }}</td>
+            <td class="num">£{{ row.amount|floatformat:2 }}</td>
+          </tr>
+        {% endfor %}
+        {% if report.unmatched_payouts|length > 40 %}
+          <tr class="total"><td colspan="3" class="muted">Showing 40 of {{ report.unmatched_payouts|length }} unmatched payouts.</td></tr>
+        {% endif %}
+      </tbody>
+    </table>
+  {% endif %}
+
+  <h2>Inkthreadable → bank</h2>
+  {% if report.supplier_matches %}
+    <table>
+      <thead>
+        <tr>
+          <th>Invoice</th>
+          <th>Banked</th>
+          <th class="num">Invoice</th>
+          <th class="num">Bank</th>
+          <th>Status</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in report.supplier_matches %}
+          <tr>
+            <td>{{ row.supplier_order.supplier_reference }} · {{ row.supplier_order.placed_at|date:"j M Y" }}</td>
+            <td>{{ row.bank_transaction.occurred_on|date:"j M Y" }}</td>
+            <td class="num">£{{ row.supplier_order.known_total|floatformat:2 }}</td>
+            <td class="num">£{{ row.bank_transaction.amount|floatformat:2 }}</td>
+            <td>
+              {% if row.is_confirmed %}<span class="pill good">confirmed</span>{% else %}<span class="pill warn">suggested</span>{% endif %}
+              <div class="muted" style="font-size:.78rem">{{ row.reason }}</div>
+            </td>
+            <td>
+              {% if row.persisted %}
+                {% if not row.is_confirmed %}
+                  <form class="inline" method="post">{% csrf_token %}
+                    <input type="hidden" name="action" value="confirm">
+                    <input type="hidden" name="link_id" value="{{ row.persisted.pk }}">
+                    <button class="btn" type="submit">Confirm</button>
+                  </form>
+                {% endif %}
+                <form class="inline" method="post">{% csrf_token %}
+                  <input type="hidden" name="action" value="clear">
+                  <input type="hidden" name="link_id" value="{{ row.persisted.pk }}">
+                  <button class="btn btn-danger" type="submit">Clear</button>
+                </form>
+              {% else %}
+                <form class="inline" method="post">{% csrf_token %}
+                  <input type="hidden" name="action" value="confirm">
+                  <input type="hidden" name="transaction_id" value="{{ row.bank_transaction.pk }}">
+                  <input type="hidden" name="kind" value="{{ row.kind }}">
+                  <button class="btn" type="submit">Confirm</button>
+                </form>
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p class="muted">No supplier invoice matched an Inkthreadable bank charge in this period.</p>
+  {% endif %}
+
+  {% if report.unmatched_charges %}
+    <h2>Unmatched Inkthreadable charges</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Counterparty</th>
+          <th class="num">Amount</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in report.unmatched_charges|slice:":40" %}
+          <tr>
+            <td>{{ row.occurred_on|date:"j M Y" }}</td>
+            <td>{{ row.counterparty }}</td>
+            <td class="num">£{{ row.amount|floatformat:2 }}</td>
+          </tr>
+        {% endfor %}
+        {% if report.unmatched_charges|length > 40 %}
+          <tr class="total"><td colspan="3" class="muted">Showing 40 of {{ report.unmatched_charges|length }} unmatched charges.</td></tr>
+        {% endif %}
+      </tbody>
+    </table>
+  {% endif %}
+{% endblock %}
+
+{% block footer %}
+  Stage 5: reconciliation. A payout or supplier charge stays unmatched unless
+  the amount and date actually line up. Confirmed links are not overwritten.
+{% endblock %}

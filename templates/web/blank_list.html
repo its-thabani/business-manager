@@ -1,0 +1,46 @@
+{% extends "web/base.html" %}
+{% load humanize %}
+
+{% block subtitle %}Inkthreadable blanks already synced into this database{% endblock %}
+
+{% block content %}
+  <p class="period">
+    {{ blanks|length }} blanks · {{ variant_total }} supplier variants.
+    These are what the mapping page can assign a Shopify product to.
+    There is no public Inkthreadable catalogue API — these rows come from
+    orders that have already been fulfilled. Inkthreadable phases garments out;
+    a missing blank does not erase historical costs.
+  </p>
+  <p class="muted">
+    Missing a blank (for example AT002 tees)? Open a Shopify product on
+    <a href="{% url 'web:mapping_list' %}">Mapping</a> and create it there, then set a unit cost.
+  </p>
+
+  <h2>Blanks</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Blank</th>
+        <th>Code</th>
+        <th>Brand</th>
+        <th class="num">Variants</th>
+        <th class="num">Shop products</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for blank in blanks %}
+        <tr>
+          <td><a href="{% url 'web:blank_detail' blank.pk %}">{{ blank }}</a></td>
+          <td class="muted">{{ blank.supplier_id|default:"—" }}</td>
+          <td class="muted">{{ blank.brand|default:"—" }}</td>
+          <td class="num">{{ blank.variant_count }}</td>
+          <td class="num">{{ blank.mapped_products }}</td>
+          <td>{% if blank.is_discontinued %}<span class="pill warn">phased out</span>{% endif %}</td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="6" class="muted">No supplier products yet. Run <code>manage.py sync_inkthreadable</code>.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endblock %}

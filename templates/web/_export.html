@@ -1,0 +1,3 @@
+<p class="actions">
+  <a class="btn" href="?{% for key, value in request.GET.items %}{% if key != 'export' %}{{ key }}={{ value|urlencode }}&amp;{% endif %}{% endfor %}export=csv">Download this table (CSV)</a>
+</p>

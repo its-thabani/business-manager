@@ -1,0 +1,159 @@
+{% extends "web/base.html" %}
+{% load humanize %}
+
+{% block subtitle %}
+  {{ product.title }} · {{ date_range.label }}
+{% endblock %}
+
+{% block content %}
+  <p class="period">
+    <a href="{% url 'web:products' %}?{{ range_query }}">← Products</a>
+    · <a href="{% url 'web:mapping_detail' product.pk %}">Mapping</a>
+    {% if mapping.no_supplier %}
+      · <span class="pill good">digital</span>
+    {% elif mapping.supplier_product %}
+      · {{ mapping.supplier_product }}
+    {% endif %}
+  </p>
+
+  {% include "web/_period.html" %}
+
+  <div class="cards">
+    <div class="card">
+      <div class="label">Units</div>
+      <div class="value">{{ performance.units|intcomma }}</div>
+      <div class="period">
+        {{ performance.orders|intcomma }} orders
+        {% if vs_previous.units_pct is not None %}
+          · <span class="delta {% if vs_previous.units_pct < 0 %}neg{% else %}pos{% endif %}">{{ vs_previous.units_pct|floatformat:0 }}% vs previous</span>
+        {% endif %}
+      </div>
+    </div>
+    <div class="card">
+      <div class="label">Net sales</div>
+      <div class="value">£{{ performance.net_revenue|floatformat:2 }}</div>
+      <div class="period">
+        {% if performance.avg_selling_price %}avg £{{ performance.avg_selling_price|floatformat:2 }}{% endif %}
+        {% if vs_previous.revenue_pct is not None %}
+          · <span class="delta {% if vs_previous.revenue_pct < 0 %}neg{% else %}pos{% endif %}">{{ vs_previous.revenue_pct|floatformat:0 }}% vs previous</span>
+        {% endif %}
+      </div>
+    </div>
+    <div class="card">
+      <div class="label">Contribution profit</div>
+      <div class="value {% if not performance.is_complete %}warn{% elif performance.profit < 0 %}neg{% else %}pos{% endif %}">
+        {% if performance.is_complete %}£{{ performance.profit|floatformat:2 }}{% else %}—{% endif %}
+      </div>
+      <div class="period">
+        {% if performance.is_complete and performance.margin_pct is not None %}
+          {{ performance.margin_pct|floatformat:1 }}% margin
+        {% elif performance.lines_missing_cost %}
+          {{ performance.lines_missing_cost }} line{{ performance.lines_missing_cost|pluralize }} without cost
+        {% endif %}
+        {% if vs_previous.profit_pct is not None %}
+          · <span class="delta {% if vs_previous.profit_pct < 0 %}neg{% else %}pos{% endif %}">{{ vs_previous.profit_pct|floatformat:0 }}% vs previous</span>
+        {% endif %}
+      </div>
+    </div>
+    <div class="card">
+      <div class="label">Refund rate</div>
+      <div class="value">{% if performance.refund_rate_pct is not None %}{{ performance.refund_rate_pct|floatformat:1 }}%{% else %}—{% endif %}</div>
+      <div class="period">of units sold</div>
+    </div>
+  </div>
+
+  <div class="charts two">
+    <div class="chart">
+      <div class="label">Monthly sales</div>
+      <div class="chart-legend">
+        <span><i class="swatch" style="background:#818cf8"></i>Net sales</span>
+        <span><i class="swatch" style="background:#15803d"></i>Provisional profit</span>
+      </div>
+      <div class="cols">
+        {% for month in months %}
+          <div class="col">
+            <div class="bars">
+              <span class="barbit rev" style="height:{{ month.revenue_pct }}%"></span>
+              <span class="barbit profit {% if month.profit_neg %}neg{% endif %}" style="height:{{ month.profit_pct }}%"></span>
+            </div>
+            <div class="x">{{ month.label }}</div>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+    <div class="chart">
+      <div class="label">Size mix</div>
+      {% for row in sizes %}
+        <div class="hbar">
+          <div class="name">{{ row.value }}</div>
+          <div class="track"><span style="width:{{ row.bar_pct }}%"></span></div>
+          <div class="n">{{ row.units|intcomma }}</div>
+        </div>
+      {% empty %}
+        <p class="muted">No size options on what sold.</p>
+      {% endfor %}
+      {% if colours %}
+        <div class="label" style="margin-top:1.25rem">Colour mix</div>
+        {% for row in colours %}
+          <div class="hbar">
+            <div class="name">{{ row.value }}</div>
+            <div class="track"><span style="width:{{ row.bar_pct }}%;background:#64748b"></span></div>
+            <div class="n">{{ row.units|intcomma }}</div>
+          </div>
+        {% endfor %}
+      {% endif %}
+    </div>
+  </div>
+
+  <h2>Variants that sold</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Variant</th>
+        <th class="num">Units</th>
+        <th class="num">Net sales</th>
+        <th class="num">Profit</th>
+        <th class="num">Margin</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in variants %}
+        <tr>
+          <td>{{ row.label }}</td>
+          <td class="num">{{ row.units|intcomma }}</td>
+          <td class="num">£{{ row.net_revenue|floatformat:2 }}</td>
+          <td class="num">{% if row.is_complete %}£{{ row.profit|floatformat:2 }}{% else %}—{% endif %}</td>
+          <td class="num">{% if row.is_complete and row.margin_pct is not None %}{{ row.margin_pct|floatformat:1 }}%{% else %}—{% endif %}</td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="5" class="muted">Nothing sold in this period.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <h2>Catalogue variants</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Variant</th>
+        <th>Size</th>
+        <th>Colour</th>
+        <th>SKU</th>
+        <th class="num">Price</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for variant in product.variants.all %}
+        <tr>
+          <td>{{ variant.title|default:variant.display_options }}</td>
+          <td>{{ variant.size|default:"—" }}</td>
+          <td>{{ variant.colour|default:"—" }}</td>
+          <td class="muted">{{ variant.sku|default:"—" }}</td>
+          <td class="num">{{ variant.price|default:"—" }}</td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="5" class="muted">No variants.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endblock %}

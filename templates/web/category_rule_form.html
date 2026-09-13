@@ -1,0 +1,66 @@
+{% extends "web/base.html" %}
+
+{% block subtitle %}Edit categorisation rule{% endblock %}
+
+{% block content %}
+  <p class="period"><a href="{% url 'web:category_rules' %}">← Categories</a></p>
+  <h2>Edit rule</h2>
+  <form method="post" class="card" style="margin-top:1rem">{% csrf_token %}
+    <div class="sim-grid">
+      <div>
+        <label for="pattern">Pattern</label>
+        <input type="text" id="pattern" name="pattern" required value="{{ rule.pattern }}">
+      </div>
+      <div>
+        <label for="match_type">Match</label>
+        <select id="match_type" name="match_type">
+          {% for value, label in match_types %}
+            <option value="{{ value }}"{% if rule.match_type == value %} selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label for="match_field">Look at</label>
+        <select id="match_field" name="match_field">
+          {% for value, label in match_fields %}
+            <option value="{{ value }}"{% if rule.match_field == value %} selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label for="amount_condition">Direction</label>
+        <select id="amount_condition" name="amount_condition">
+          {% for value, label in amount_conditions %}
+            <option value="{{ value }}"{% if rule.amount_condition == value %} selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label for="category">Category</label>
+        <select id="category" name="category" required>
+          {% for category in categories %}
+            <option value="{{ category.pk }}"{% if rule.category_id == category.pk %} selected{% endif %}>
+              {{ category.name }} ({{ category.get_kind_display }})
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label for="priority">Priority (lowest first)</label>
+        <input type="number" id="priority" name="priority" value="{{ rule.priority }}">
+      </div>
+      <div>
+        <label for="name">Label (optional)</label>
+        <input type="text" id="name" name="name" value="{{ rule.name }}">
+      </div>
+    </div>
+    <div class="actions">
+      <label><input type="checkbox" name="is_active"{% if rule.is_active %} checked{% endif %}> Active</label>
+      <button class="btn btn-primary" type="submit">Save</button>
+    </div>
+  </form>
+  <form method="post" class="actions" onsubmit="return confirm('Delete this rule? Locked bank rows keep their category.');">{% csrf_token %}
+    <input type="hidden" name="action" value="delete">
+    <button class="btn btn-danger" type="submit">Delete rule</button>
+  </form>
+{% endblock %}

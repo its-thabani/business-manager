@@ -1,0 +1,30 @@
+{% extends "web/base.html" %}
+
+{% block title %}Log in — StayLit Business Manager{% endblock %}
+
+{% block content %}
+  <div class="login-card">
+    <p class="kicker" style="letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-size:.72rem;margin:0 0 .4rem">StayLit Apparel</p>
+    <h2 style="margin:.2rem 0 1rem">Sign in</h2>
+    <p class="muted">Private business manager. Not a public site.</p>
+    {% if form.errors %}
+      <div class="note">That username or password was not recognised.</div>
+    {% endif %}
+    <form method="post" class="stack" style="margin-top:1rem">{% csrf_token %}
+      <div>
+        <label for="id_username">Username</label>
+        <input type="text" name="username" id="id_username" autocomplete="username" autofocus>
+      </div>
+      <div>
+        <label for="id_password">Password</label>
+        <input type="password" name="password" id="id_password" autocomplete="current-password">
+      </div>
+      <input type="hidden" name="next" value="{{ next }}">
+      <button class="btn btn-primary" type="submit">Log in</button>
+    </form>
+  </div>
+{% endblock %}
+
+{% block footer %}
+  Private StayLit Apparel books. Ask for a login if you do not have one.
+{% endblock %}

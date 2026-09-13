@@ -1,0 +1,101 @@
+{% extends "web/base.html" %}
+
+{% block subtitle %}Keep the books current — all from this page{% endblock %}
+
+{% block content %}
+  {% if sync_running %}
+    <meta http-equiv="refresh" content="15">
+    <div class="oknote">
+      An update is running. This page refreshes itself every 15 seconds until it finishes.
+      You can leave it open.
+    </div>
+  {% endif %}
+
+  {% if needs_bank or needs_shop %}
+    <div class="note">
+      <strong>First-time setup.</strong>
+      Upload a bank file below
+      {% if needs_shop %}and press <em>Update Shopify</em>{% endif %}.
+      Then <em>Update Inkthreadable</em>, then <em>Link supplier orders</em>.
+      Nothing here needs a computer terminal.
+    </div>
+  {% endif %}
+
+  <h2>Bank files</h2>
+  <p class="muted">
+    Upload next month’s Monzo CSV even if it still contains earlier months.
+    Rows already held are left untouched, including categories you set by hand.
+  </p>
+  <form method="post" enctype="multipart/form-data" class="card" style="margin-top:1rem">{% csrf_token %}
+    <label for="monzo_csv">Monzo CSV</label>
+    <input type="file" name="monzo_csv" id="monzo_csv" accept=".csv,text/csv">
+    <div class="actions">
+      <button class="btn btn-primary" type="submit">Import bank CSV</button>
+    </div>
+  </form>
+
+  <p class="muted" style="margin-top:1.25rem">
+    Or upload the Finance Dashboard spreadsheet once, to bring in older bank history.
+    The spreadsheet is only read. It is never overwritten.
+  </p>
+  <form method="post" enctype="multipart/form-data" class="card" style="margin-top:.75rem">{% csrf_token %}
+    <label for="workbook">Finance Dashboard (.xlsx)</label>
+    <input type="file" name="workbook" id="workbook" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
+    <div class="actions">
+      <button class="btn" type="submit">Import spreadsheet</button>
+    </div>
+  </form>
+
+  <h2>Shop updates</h2>
+  <p class="muted">
+    Press a button. Shopify is usually a few minutes. Inkthreadable can take much longer
+    the first time — leave this page open so the update can finish.
+  </p>
+  <div class="actions">
+    <form method="post">{% csrf_token %}
+      <input type="hidden" name="action" value="sync_shopify">
+      <button class="btn btn-primary" type="submit"{% if sync_running %} disabled{% endif %}>Update Shopify</button>
+    </form>
+    <form method="post">{% csrf_token %}
+      <input type="hidden" name="action" value="sync_inkthreadable">
+      <button class="btn btn-primary" type="submit"{% if sync_running %} disabled{% endif %}>Update Inkthreadable</button>
+    </form>
+    <form method="post">{% csrf_token %}
+      <input type="hidden" name="action" value="relink">
+      <button class="btn" type="submit">Link supplier orders</button>
+    </form>
+    <form method="post">{% csrf_token %}
+      <input type="hidden" name="action" value="suggest_mappings">
+      <button class="btn" type="submit">Suggest product mappings</button>
+    </form>
+    <form method="post">{% csrf_token %}
+      <input type="hidden" name="action" value="suggest_reconciliation">
+      <button class="btn" type="submit">Suggest bank matches</button>
+    </form>
+  </div>
+
+  <h2>Data sources</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Source</th>
+        <th>Last update</th>
+        <th>Records</th>
+        <th>Notes</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for source in sources %}
+        <tr>
+          <td>
+            {% if source.ok %}<span class="pos">✓</span>{% else %}<span class="warn">⚠</span>{% endif %}
+            {{ source.name }}
+          </td>
+          <td class="muted">{% if source.last %}{{ source.last|date:"j M Y H:i" }}{% else %}—{% endif %}</td>
+          <td>{{ source.detail }}</td>
+          <td class="muted">{% if source.warning %}<span class="warn">{{ source.warning }}</span>{% else %}—{% endif %}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endblock %}

@@ -1,0 +1,38 @@
+# Secrets - never commit
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+htmlcov/
+.coverage
+coverage.xml
+
+# Django
+*.sqlite3
+*.sqlite3-journal
+/media/
+/staticfiles/
+
+# Local scratch / one-off analysis
+/scratch/
+
+# Uploaded source data (contains real financial records)
+/files/
+/data/uploads/
+
+# OS / editor
+.DS_Store
+*.swp
+.idea/
+.vscode/

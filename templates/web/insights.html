@@ -1,0 +1,34 @@
+{% extends "web/base.html" %}
+
+{% block subtitle %}
+  {{ date_range.label }} · {{ date_range.start|date:"j M Y" }} – {{ date_range.end|date:"j M Y" }}
+{% endblock %}
+
+{% block content %}
+  {% include "web/_period.html" %}
+  {% include "web/_export.html" %}
+
+  <h2>Insights</h2>
+  <p class="muted">
+    Numbered findings from figures this app already calculated. Nothing here is a
+    forecast, and shop profit stays — when a sold line has no cost.
+  </p>
+
+  <ol class="insights">
+    {% for item in insights %}
+      <li>
+        <div class="n">{{ forloop.counter }} · {{ item.tone }}</div>
+        <h3>{{ item.title }}</h3>
+        <p>{{ item.body }}</p>
+        {% if item.href %}
+          <p><a href="{{ item.href }}">{{ item.href_label|default:"Open" }}</a></p>
+        {% endif %}
+      </li>
+    {% empty %}
+      <li>
+        <h3>Nothing to report in this period</h3>
+        <p class="muted">Pick a wider range, or sync Shopify and import Monzo first.</p>
+      </li>
+    {% endfor %}
+  </ol>
+{% endblock %}

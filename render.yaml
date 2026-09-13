@@ -1,0 +1,47 @@
+# Render Blueprint. The web service uses the free instance type (spins down
+# when idle). Render no longer offers free Postgres — set DATABASE_URL in the
+# dashboard to a Neon (or other) Postgres URL, or attach a paid Render database
+# later. Secrets are never stored in this file.
+
+services:
+  - type: web
+    name: staylit-business-manager
+    runtime: python
+    plan: free
+    buildCommand: "./build.sh"
+    startCommand: "gunicorn config.wsgi:application --workers 2 --timeout 120"
+    healthCheckPath: /healthz
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: DJANGO_SECRET_KEY
+        generateValue: true
+      - key: DJANGO_DEBUG
+        value: "False"
+      - key: PYTHON_VERSION
+        value: "3.13.0"
+      - key: WEB_CONCURRENCY
+        value: "2"
+
+      - key: SHOPIFY_STORE
+        value: scctj4-i8.myshopify.com
+      - key: SHOPIFY_API_VERSION
+        value: "2025-01"
+      - key: INKTHREADABLE_APP_ID
+        value: APP-00146434
+      - key: INKTHREADABLE_BASE_URL
+        value: https://www.inkthreadable.co.uk/api
+      - key: INKTHREADABLE_AUTH_STYLE
+        value: query
+
+      # Secrets: set these in the Render dashboard, not here
+      - key: SHOPIFY_ACCESS_TOKEN
+        sync: false
+      - key: SHOPIFY_CLIENT_ID
+        sync: false
+      - key: SHOPIFY_CLIENT_SECRET
+        sync: false
+      - key: INKTHREADABLE_SECRET_KEY
+        sync: false
+      - key: OPERATOR_PASSWORD
+        sync: false

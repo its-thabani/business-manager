@@ -1,0 +1,111 @@
+{% extends "web/base.html" %}
+{% load humanize %}
+
+{% block subtitle %}
+  {{ date_range.label }} · {{ date_range.start|date:"j M Y" }} – {{ date_range.end|date:"j M Y" }}
+{% endblock %}
+
+{% block content %}
+  {% include "web/_period.html" %}
+  {% include "web/_export.html" %}
+
+  <nav class="chips" aria-label="Customer filters">
+    <a class="{% if hide_free %}on{% endif %}" href="?{{ range_query }}&amp;sort={{ sort }}{% if hide_free %}&amp;hide_free=0{% endif %}">
+      {% if hide_free %}Paid orders only{% else %}Including £0 downloads{% endif %}
+    </a>
+  </nav>
+
+  <div class="cards">
+    <div class="card">
+      <div class="label">Customers</div>
+      <div class="value">{{ metrics.identified|intcomma }}</div>
+      <div class="period">
+        identified buyers
+        {% if metrics.unidentified_orders %}
+          · {{ metrics.unidentified_orders }} guest order{{ metrics.unidentified_orders|pluralize }} with no email
+        {% endif %}
+      </div>
+    </div>
+    <div class="card">
+      <div class="label">New</div>
+      <div class="value">{{ metrics.new_customers|intcomma }}</div>
+      <div class="period">first paid order in this period</div>
+    </div>
+    <div class="card">
+      <div class="label">Returning</div>
+      <div class="value">{{ metrics.returning_customers|intcomma }}</div>
+      <div class="period">
+        {% if metrics.repeat_rate_pct is not None %}{{ metrics.repeat_rate_pct|floatformat:0 }}% of buyers{% else %}no identified buyers{% endif %}
+      </div>
+    </div>
+    <div class="card">
+      <div class="label">AOV</div>
+      <div class="value">{% if metrics.aov is not None %}£{{ metrics.aov|floatformat:2 }}{% else %}—{% endif %}</div>
+      <div class="period">
+        {{ metrics.paid_orders|intcomma }} order{{ metrics.paid_orders|pluralize }}
+        {% if metrics.aov_new is not None or metrics.aov_returning is not None %}
+          · new {% if metrics.aov_new is not None %}£{{ metrics.aov_new|floatformat:2 }}{% else %}—{% endif %}
+          · returning {% if metrics.aov_returning is not None %}£{{ metrics.aov_returning|floatformat:2 }}{% else %}—{% endif %}
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <p class="period muted">
+    Returning means they had a paid order before this period started.
+    {{ metrics.repeaters_in_period }} buyer{{ metrics.repeaters_in_period|pluralize }} placed two or more orders in the window
+    {% if metrics.in_period_repeat_pct is not None %}({{ metrics.in_period_repeat_pct|floatformat:0 }}%){% endif %}.
+  </p>
+
+  <div class="chart" style="margin-top:1.25rem">
+    <div class="label">New vs returning each month</div>
+    <div class="chart-legend">
+      <span><i class="swatch" style="background:#818cf8"></i>New</span>
+      <span><i class="swatch" style="background:#0f172a"></i>Returning</span>
+    </div>
+    <div class="cols">
+      {% for month in months %}
+        <div class="col">
+          <div class="bars">
+            <span class="barbit new" style="height:{{ month.new_pct }}%" title="{{ month.new }} new"></span>
+            <span class="barbit returning" style="height:{{ month.returning_pct }}%" title="{{ month.returning }} returning"></span>
+          </div>
+          <div class="x">{{ month.label }}</div>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <h2>Buyers in this period</h2>
+  <table>
+    <thead>
+      <tr>
+        <th><a class="{% if sort == 'name' %}on{% endif %}" href="?{{ range_query }}&amp;sort=name{% if not hide_free %}&amp;hide_free=0{% endif %}">Customer</a></th>
+        <th><a class="{% if sort == 'first' %}on{% endif %}" href="?{{ range_query }}&amp;sort=first{% if not hide_free %}&amp;hide_free=0{% endif %}">First paid</a></th>
+        <th><a class="{% if sort == 'last' %}on{% endif %}" href="?{{ range_query }}&amp;sort=last{% if not hide_free %}&amp;hide_free=0{% endif %}">Last paid</a></th>
+        <th class="num"><a class="{% if sort == 'orders' %}on{% endif %}" href="?{{ range_query }}&amp;sort=orders{% if not hide_free %}&amp;hide_free=0{% endif %}">Orders</a></th>
+        <th class="num"><a class="{% if sort == 'spend' %}on{% endif %}" href="?{{ range_query }}&amp;sort=spend{% if not hide_free %}&amp;hide_free=0{% endif %}">Spend</a></th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in customers %}
+        <tr>
+          <td>
+            {% if row.customer_id %}
+              <a href="{% url 'web:customer_detail' row.customer_id %}?{{ range_query }}{% if not hide_free %}&amp;hide_free=0{% endif %}">{{ row.name }}</a>
+            {% else %}{{ row.name }}{% endif %}
+            {% if row.email and row.email != row.name %}<div class="muted">{{ row.email }}</div>{% endif %}
+          </td>
+          <td>{{ row.first_paid_on|date:"j M Y" }}</td>
+          <td>{{ row.last_paid_on|date:"j M Y" }}</td>
+          <td class="num">{{ row.period_orders }}</td>
+          <td class="num">£{{ row.period_spend|floatformat:2 }}</td>
+          <td>{% if row.is_new %}<span class="pill">new</span>{% else %}<span class="pill good">returning</span>{% endif %}</td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="6" class="muted">No identified buyers in this period.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endblock %}
