@@ -38,7 +38,7 @@ Bank figures must remain usable even when Shopify or Inkthreadable data is thin.
 | 18 | Refund analytics | done | `/refunds/` — rate by product / variant; cash is the refund total |
 | 19 | Product groups (tees, hoodies, …) | done | `/groups/` — title-matched (Shopify types are empty) |
 | 20 | AI assistant (explains calculated numbers only) | skipped | Exports instead — paste CSV into any AI if wanted |
-| 21 | Render deployment | partial | Free web blueprint; Postgres URL set in the dashboard — not live yet |
+| 21 | Render deployment | done | Live at https://staylit-business-manager.onrender.com — Render free web + Neon Postgres |
 
 ---
 
@@ -72,12 +72,13 @@ Bank figures must remain usable even when Shopify or Inkthreadable data is thin.
 - [x] Operator guide at `/guide/` (info button next to Admin; no terminal steps)
 - [x] All monthly updates from Data health (Shopify, Inkthreadable, linking, uploads)
 - [x] Change password in the app header (and Django Admin → Users)
+- [x] Expenses page: every reportable outgoing for a period (`/expenses/`); excluded/transfer omitted
 
 ### Login and Render
 
 - [x] Login required on the hosted (Render) app
 - [x] Health check stays public (`/healthz`)
-- [ ] Postgres + env secrets on Render; `DJANGO_DEBUG=False` (blueprint ready, not live)
+- [x] Postgres + env secrets on Render; `DJANGO_DEBUG=False` (Neon `DATABASE_URL`; not Render Postgres)
 
 ### Monzo import
 
@@ -160,9 +161,11 @@ Bank figures must remain usable even when Shopify or Inkthreadable data is thin.
 
 ---
 
+Parked next-slice ideas live in [docs/FUTURE.md](docs/FUTURE.md). Do not tick them here until they ship.
+
 ## How to use this file
 
 When a stage ships, mark it `done` here **and** in the README roadmap.
 If something is only half-true (e.g. login exists in admin but not on the app), keep it `partial`.
 Do not tick bank-independent finance as done on product pages — those pages need mappings.
-Do not tick Render as done until the service is actually deployed.
+Render is done when the service is live (it is). Keep Neon as the database; do not add Render Postgres.

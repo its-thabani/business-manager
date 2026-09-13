@@ -2,12 +2,14 @@
 
 This is the private business manager for StayLit Apparel. It replaces copying bank files into the old Finance Dashboard spreadsheet.
 
-There are two halves:
+There are two halves. They are related, but they are **not the same number**.
 
-- **Finance** — what actually moved in Monzo (Cash, Reconciliation, Categories, Data health).
+- **Finance** — what actually moved in Monzo (Cash, Expenses, Reconciliation, Categories, Data health).
 - **Insights** — what Shopify sold and what Inkthreadable charged (products, orders, shipping, and the rest).
 
-Those two are related, but they are not the same number. A sale is booked on the day the customer places it. The money lands in Monzo days later, after card fees. Use **Reconciliation** to join them up. Do not expect Cash and Orders to match pound-for-pound.
+A sale is booked on the day the customer orders. The money lands in Monzo days later, after card fees. Use **Reconciliation** to join them up. Do not expect Cash and Orders to match pound-for-pound.
+
+The **i** button (top right) opens this guide.
 
 ---
 
@@ -20,50 +22,44 @@ The first click after a quiet spell can take a minute. The free host goes to sle
 - **Username:** `laura`
 - **First password:** `1234`
 
-Change that password the first time you are in: **Change password** (top right), next to Admin. You can also change it in **Admin → Users → laura**. The new password needs letters in it — a number-only password will be refused.
+Change that password the first time you are in: **Change password** (top right). You can also change it in **Admin → Users → laura**. The new password needs letters in it — a number-only password will be refused.
 
-- **i** (next to Admin) opens this guide.
 - **Log out** ends the session.
+- **Admin** is the technical back office (individual bank rows, users). Day to day you should not need it.
 
 This is a private site. Do not share the login.
 
 ---
 
-## First-time setup (new hosted copy)
+## Dates (almost every page)
 
-If Cash is empty, the books have not been loaded yet. Stay on **Data health** and work top to bottom. You do not need a computer terminal.
+Most pages have period pills plus **From / To**.
 
-1. **Import bank CSV** — upload a Monzo export. Overlapping months are fine.
-2. Or **Import spreadsheet** — upload the Finance Dashboard `.xlsx` once, for older history. The spreadsheet itself is never changed.
-3. **Update Shopify** — pulls products and orders. Usually a few minutes. Leave the page open.
-4. **Update Inkthreadable** — pulls what the printer charged. The first run can take a long time. Leave the page open; it refreshes itself.
-5. **Link supplier orders** — attaches printer jobs to Shopify orders so profit and postage can be shown.
-6. **Suggest product mappings** — then open **Mapping** and confirm what looks right. Mark free downloads as digital.
-7. **Suggest bank matches** — then open **Reconciliation** and confirm Stripe and Inkthreadable rows you agree with.
+| Pill | Meaning |
+| --- | --- |
+| Today | Calendar today (London) |
+| Last 7 / 30 / 90 days | Rolling windows |
+| This month / Last month | Calendar months |
+| This quarter | Current quarter |
+| Year to date | 1 January through today |
+| Last calendar year | The previous full year |
+| Last 12 months | Rolling year |
+| All time | Everything in the books |
 
-Yellow notes mean something still needs a person. The app will not invent a cost or a match.
+Type two dates and **Apply dates** for any other range.
 
----
+- **Cash** compares to the **same dates last year** (how the old dashboard worked).
+- **Product** pages also show **vs previous** — the same length of time immediately before the window you picked.
 
-## Dates
-
-Most pages have period pills (Today, Last 7 days, This month, Year to date, and so on) plus **From / To** dates.
-
-- Use a pill for a named window.
-- Type two dates and **Apply dates** for any other range.
-- Product pages also show **vs previous** — the same length of time immediately before the window you picked.
-
-Cash compares to the **same dates last year**, because that is how the old dashboard worked.
-
-Shopify launched on **16 July 2025** (order `#1001`). Bank rows before that are from the Wix era. They still belong on Cash. They will not match Shopify payouts, and that is expected.
+Shopify launched on **16 July 2025** (order `#1001`). Bank rows before that are from the Wix era. They still belong on Cash and Expenses. They will not match Shopify payouts, and that is expected.
 
 ---
 
 ## Download tables
 
-Every list page has **Download this table (CSV)**. Open the file in Excel or Numbers, keep it as a record, or paste it into an AI tool of your choice if you want a written summary.
+Every list page has **Download this table (CSV)**. Open it in Excel or Numbers, keep it as a record, or paste it into another tool if you want a written summary.
 
-The numbers in the file are the same numbers on the page. An AI cannot invent a profit the app refused to show.
+The numbers in the file are the same numbers on the page. A chat tool cannot invent a profit this app refused to show.
 
 ---
 
@@ -71,48 +67,147 @@ The numbers in the file are the same numbers on the page. An AI cannot invent a 
 
 ### Cash
 
-This is the P&L from the bank. Revenue, expenses and profit always come from Monzo, even if Shopify is stale.
+**What it is for:** “Is the business making money from the bank?” This is the closest replacement for the old dashboard totals.
 
-Default view **excludes salary and tithe**. Use **Include salary & tithe** when you want the full net.
+**What you see**
 
-A dash (—) means the figure cannot be stated. The app will not pretend a missing cost is £0.
+- Cards for **Revenue**, **Expenses**, **Profit**, and how many bank rows sit in the period.
+- A line chart of profit and revenue over time.
+- Monthly columns (revenue / expenses / profit).
+- “Where the money went” — the largest categories.
+- A full profit-and-loss table: contribution → operating → net.
+- Every **reportable** category with a total and share.
 
-If a yellow note says transactions have no category, open **Categories**.
+**What you can do**
+
+- Change the dates.
+- Toggle **Profit / expenses excluding salary & tithe** (the spreadsheet default) vs **Include salary & tithe**.
+- Sort the category table by name, treatment, count, total or share.
+- Download the P&L and category table.
+
+**What it can tell you**
+
+- Cash profit this month / year, and vs the same dates last year.
+- Whether spend is printer cost, postage, fees, software, or drawings.
+- Whether uncategorised rows are quietly left out of the figures (yellow note).
+
+Revenue, expenses and profit on this page **always come from Monzo**, even if Shopify is stale.
+
+Transfers and anything marked excluded do not appear here. They are outside the books.
+
+A dash (**—**) means the figure cannot be stated. The app will not pretend a missing cost is £0.
+
+Money paid to a personal account and then transferred in (for example a t-shirt paid to Laura) should be **Direct Sales Income**, not Salary. Salary credits are not treated as sales.
+
+---
 
 ### Expenses
 
-Every amount that left the account and counts as a cost, for the dates you pick. This is the old Expense Summary: totals by category, then every outgoing row.
+**What it is for:** the old Expense Summary — every true outgoing in a period, not just the P&L total.
 
-Transfers and anything marked **excluded** are not on this page, or on Cash. They are outside the books.
+**What you see**
 
-Salary and tithe are included here by default (they are real money out). Use **Hide salary & tithe** if you want operating spend only. Customer refunds are shown as a separate card — they reduce sales, they are not added to expenses.
+- **True expenses** — money that left the account and counts as a cost.
+- **Customer refunds** as a separate card (they reduce sales; they are not added to expenses).
+- Uncategorised outgoings (shown so you can label them; not in the total).
+- A bar chart and table of spend by category.
+- A row for every reportable outgoing (date, who, category, amount).
 
-### Categories
+**What you can do**
 
-Rules look at the bank text (for example `INKTHREADABLE` or `SHOPIFY`) and assign a category.
+- Pick any dates.
+- **All true expenses** includes salary and tithe (they did leave the account).
+- **Hide salary & tithe** for operating spend only.
+- Sort the outgoing list by date, name, category or amount.
+- Download every outgoing row.
 
-- Lowest **priority** number is tried first. First match wins.
-- **Direction** matters: Shopify payouts and the Shopify subscription both say “SHOPIFY”. Money in vs money out is what separates them.
-- **Apply rules** fills gaps. It never overwrites a category you set by hand, or one imported from the spreadsheet.
+**What it can tell you**
+
+- Exactly where cash went in a month.
+- Whether Inkthreadable, Shopify hosting, or software is the large line.
+- Which individual payments made up a category.
+
+Transfers and excluded rows are not listed.
+
+---
 
 ### Reconciliation
 
-Matches:
+**What it is for:** joining shop activity to bank cash. Shopify sales and Monzo deposits are different clocks.
 
-- Shopify sales days → Stripe / Adyen deposits
-- Inkthreadable invoices → Inkthreadable bank charges
+**What you see**
 
-Confirm what looks right. Clear a suggestion if it is wrong. Confirmed links are not overwritten the next time suggestions run.
+- Shopify net sales vs expected cash after fees vs Stripe/Adyen received, and the **cash gap**.
+- Inkthreadable leaving the bank vs supplier invoices vs estimated fulfilment.
+- How many payouts and sales days are matched or still open.
+- A monthly chart of expected cash, bank payouts and printer spend.
+- Suggested matches you can confirm or clear.
+
+**What you can do**
+
+- Pick dates (Wix-era bank before 16 Jul 2025 will not match Shopify — that is noted).
+- **Confirm** a suggested Shopify-day → Stripe/Adyen match.
+- **Confirm** an Inkthreadable invoice → bank charge.
+- **Clear** a suggestion that is wrong.
+- Run **Suggest bank matches** from Data health first if the list is empty.
+
+Confirmed links are **not** overwritten the next time suggestions run.
+
+**What it can tell you**
+
+- Whether this month’s sales have actually landed.
+- Whether the printer has been paid in line with invoices.
+- Which deposits or charges still need a person.
+
+---
+
+### Categories
+
+**What it is for:** teaching the app what a Monzo row *means*, so Cash and Expenses stay correct.
+
+**What you see**
+
+- The list of rules (pattern, what they look at, which category they assign, priority).
+- A form to add a rule.
+- A count of rows that still have no category.
+
+**What you can do**
+
+- Add a rule: pattern (for example `INKTHREADABLE`), match type, which text to look at, money in / money out / either, category, priority, optional name.
+- Click a rule to edit it.
+- **Apply rules** — fills gaps only. It never overwrites a category you set by hand, or one imported from the spreadsheet.
+
+**How rules work**
+
+- Lowest **priority** number is tried first. The first match wins.
+- Matching ignores case and extra spaces.
+- **Direction** matters: Shopify payouts and the Shopify subscription both say “SHOPIFY”. Money in vs money out is what separates revenue from hosting.
+
+To put one row in a category by hand (and lock it): **Admin → Bank transactions**.
+
+---
 
 ### Data health
 
-This is the only place you need for monthly updates:
+**What it is for:** keeping the books current. This is the only page you need for monthly updates. You do not need a computer terminal.
 
-1. Upload the latest Monzo CSV.
-2. **Update Shopify**.
-3. **Update Inkthreadable**.
-4. **Link supplier orders**.
-5. Glance at **Mapping** and **Reconciliation**.
+**What you can do**
+
+| Action | What it does |
+| --- | --- |
+| **Import bank CSV** | Upload a Monzo export. Overlapping months are fine. Rows already held are left alone, including categories you set by hand. |
+| **Import spreadsheet** | Read the Finance Dashboard `.xlsx` once for older history. The file is never overwritten. |
+| **Update Shopify** | Pull products and orders. Usually a few minutes. |
+| **Update Inkthreadable** | Pull printer fulfilments and costs. The first run can take a long time. |
+| **Link supplier orders** | Attach Inkthreadable jobs to Shopify orders using the saved refs. Does not call the API. Wix / Etsy / website jobs stay unmatched. |
+| **Suggest product mappings** | Guess Shopify → blank matches. Confirmed mappings are left alone. |
+| **Suggest bank matches** | Suggest Stripe and Inkthreadable links. Confirmed links are left alone. |
+
+While Shopify or Inkthreadable is running, the page refreshes every 15 seconds and the Update buttons stay disabled. Leave the tab open.
+
+The table at the bottom shows last update time and record counts. Yellow notes need a person.
+
+The live site already has history loaded. Do not run a “first time” sync just to set up. Use these buttons for **new** months and **new** orders.
 
 ---
 
@@ -120,53 +215,327 @@ This is the only place you need for monthly updates:
 
 ### Insights
 
-Numbered findings from figures the rest of the app already calculated. Nothing here is a forecast. Download the list if you want to keep it or drop it into another tool.
+**What it is for:** a numbered briefing from figures the rest of the app already calculated. Nothing here is a forecast.
 
-The list is rebuilt every time you open the page or change the dates. There is no overnight job. After you upload a new Monzo file or run **Update Shopify** / **Update Inkthreadable** on Data health, come back here and the wording will follow the new numbers.
+**What you see**
 
-### Products, Groups, Orders
+Typical lines (only those the data can support for the dates you picked):
 
-Units, net sales, contribution profit and margin for what sold in the period.
+- Cash profit from Monzo (not Shopify).
+- Shopify sales vs bank cash (different clocks).
+- Paid orders vs free downloads.
+- Postage charged vs printer postage.
+- Discounts given away.
+- Refunds in the period.
+- Best seller and concentration in a few products.
+- Whether shop profit is withheld because mappings are unfinished.
+- Stripe in vs Inkthreadable out.
+- Repeat buyers.
+- How many Shopify days are matched to Stripe.
+- Which garment group is carrying sales.
+- Products that lost money after costs.
+- Card fees.
+- Destination country.
 
-Profit stays **—** until every sold line has a cost. That usually means:
+**What you can do**
 
-1. The Shopify order is linked to its Inkthreadable fulfilment (Data health → Link supplier orders), **or**
-2. The variant is mapped on **Mapping** (or has a Shopify Cost per item).
+- Change the dates; the list is rebuilt.
+- Follow the “Open …” link under a finding.
+- Download the list as CSV.
 
-Free Bible-verse downloads and other £0 products are hidden by default. They are not missing prices.
+There is no overnight job and no extra refresh button. After you import a bank file or update the shop, open this page again.
 
-**Groups** (T-Shirts, Hoodies, Sweatshirts, Digital) are matched from product titles.
+---
 
-Open an order for the full breakdown. Refunded garments still cost money — print-on-demand does not get the shirt back.
+### Products
 
-### Customers, Shipping, Discounts, Refunds
+**What it is for:** which garments sold, and whether they made contribution profit.
 
-- **Customers** — new vs returning, repeat rate, average order value. Guests with no email stay unidentified.
-- **Shipping** — what the customer paid vs what Inkthreadable charged, when that link exists.
-- **Discounts** — codes and automatic discounts. Profit impact only on orders whose costs are complete.
-- **Refunds** — rate by product and variant. The cash figure is the refund total.
+**What you see**
 
-### Mapping and Blanks
+- Shop totals: units, net sales, contribution profit, cost coverage.
+- A table of products (sortable).
+- Free £0 downloads and products with no orders hidden by default (toggles at the top).
 
-Shopify names a hoodie one way; Inkthreadable names the blank another way. Mapping is how the app knows what a sale cost when there is no linked fulfilment.
+**What you can do**
 
-- Confirm suggestions you trust.
-- Mark lead-magnet downloads as **digital**.
-- Leave a missing blank unmapped rather than forcing it onto the wrong garment.
+- Change dates; sort by name, units, orders, revenue, profit or margin.
+- Open a product for the detail page.
+- Download the table.
+
+**What it can tell you**
+
+- What is actually selling in this window.
+- Which lines have no cost yet (profit stays **—**).
+- Whether a best seller is profitable once the printer is paid.
+
+Profit stays **—** until every sold line has a cost. That usually means the Shopify order is linked to its Inkthreadable fulfilment, **or** the variant is mapped (or has a Shopify Cost per item).
+
+---
+
+### Product detail (click a product)
+
+**What it is for:** one garment in the period you picked.
+
+**What you see**
+
+- The product name in the heading (and the browser tab).
+- Units, net sales, contribution profit, refund rate, each vs the previous window of the same length.
+- Monthly sales chart.
+- Size mix and colour mix of what sold.
+- Variants that sold, with profit when cost is known.
+- The full catalogue of variants (size, colour, SKU, price).
+- Links back to Products and to Mapping.
+
+**What it can tell you**
+
+- Whether XS is the size that sells.
+- Whether a colour is returning more than others.
+- Whether this hoodie is carrying profit or sitting on **—**.
+
+---
+
+### Groups
+
+**What it is for:** tees vs hoodies vs sweatshirts vs digital, from product titles (Shopify’s product type is empty).
+
+**What you see**
+
+- The same style of totals as Products, per group.
+- A table of groups; click through for the products in that group.
+
+**What it can tell you**
+
+- Which garment family is carrying the shop.
+- Whether hoodies have better margin than tees once costs are known.
+
+---
+
+### Customers
+
+**What it is for:** who bought, who is new, who came back.
+
+**What you see**
+
+- Counts of identified buyers, new vs returning, repeat rate, average order value.
+- A table of customers (orders, spend).
+- Click a customer for their orders in the period.
+
+**What you can do**
+
+- Paid orders only (default) vs including £0 downloads.
+- Change dates; sort; download.
+
+**What it can tell you**
+
+- Whether the shop is mostly one-off buyers.
+- Who the repeat customers are.
+
+Guests with no email stay **unidentified** and are left out of rates rather than guessed.
+
+---
+
+### Orders
+
+**What it is for:** every countable Shopify order, with profit when costs are known.
+
+**What you see**
+
+- A sortable list: name, date, customer, status, total, profit.
+- £0 digital downloads hidden by default.
+
+**Click an order** for the full breakdown:
+
+- Product revenue, postage charged, discounts, refunds, tax.
+- Inkthreadable product cost and postage (or **—**).
+- Card fees (actual or estimated — it says which).
+- Contribution profit.
+- Line items and any refunds.
+
+**What it can tell you**
+
+- Whether a specific order made money.
+- Why profit is **—** (unlinked printer job or unmapped variant).
+
+Refunded garments still cost money. Print-on-demand does not get the shirt back.
+
+---
+
+### Shipping
+
+**What it is for:** what customers paid for postage vs what Inkthreadable charged.
+
+**What you see**
+
+- Charged, supplier cost (when known), postage result.
+- Free-postage impact on physical orders only.
+- Mix by destination country.
+- Per-order charged vs cost.
+
+**What you can do**
+
+- Filter to free postage only.
+- Change dates; download.
+
+**What it can tell you**
+
+- Whether “free UK delivery” is eating contribution.
+- Which countries you ship to, and what they paid.
+
+Cost is **—** until the fulfilment is linked.
+
+---
+
+### Discounts
+
+**What it is for:** codes and automatic discounts — what was given away.
+
+**What you see**
+
+- Total discounted, share of list price.
+- Profit impact **only** on orders whose costs are complete (otherwise **—**).
+- Ranked codes, and the orders that used them.
+
+**What it can tell you**
+
+- Which code is actually costing margin.
+- Whether automatic discounts are larger than named codes.
+
+---
+
+### Refunds
+
+**What it is for:** what came back, on sales in the period you picked.
+
+**What you see**
+
+- Refunded amount and rate (of what customers paid / of units).
+- Ranked products and variants.
+- Individual refund events.
+
+**What you can do**
+
+- Merchandise only vs including digital.
+- Restrict to one product; download.
+
+**What it can tell you**
+
+- Whether one SKU is coming back more than others.
+- The cash total of refunds (that is the cash figure — not a guess).
+
+---
 
 ### Simulate
 
-What-if only. It does **not** write the books. Read the listed assumptions.
+**What it is for:** “what if I change the price / blank cost / postage / discount?” It does **not** write the books. It replays **actual orders** in the period you picked.
+
+**What you can do**
+
+- Pick dates and optionally one product (or the whole shop).
+- Set a new unit price, or a £ price change.
+- Optionally change volume (%).
+- Set a new supplier cost, or a £ / % cost change.
+- Add an extra discount (%).
+- Tick **Free shipping**.
+- **Run scenario**.
+
+**What you see**
+
+- A yellow list of every assumption used.
+- Revenue now vs if; profit now vs if (profit stays **—** if costs are incomplete).
+- A comparison chart.
+- Break-even volume when you change shipping.
+
+**What it can tell you**
+
+- Whether a £2 price rise covers a dearer blank.
+- What free postage would have done to last month’s real orders.
+- How much volume you would need to break even on a postage change.
+
+Bookmark the URL to keep a scenario. Nothing is saved into the books.
+
+---
+
+### Mapping
+
+**What it is for:** telling the app which Shopify product is which Inkthreadable blank, so profit can be calculated when there is no linked fulfilment (or as a fallback).
+
+**What you see**
+
+- How many sold units have a cost vs still unknown.
+- How many products need review.
+- How many are marked digital (cost is £0 on purpose).
+- A table of products and mapping status.
+
+**What you can do**
+
+- Filter: needs review / all / digital / confirmed.
+- **Suggest mappings** (safe to re-run; confirmed matches stay).
+- Open a product to confirm a suggested blank, pick a blank, mark **digital / no supplier**, or leave it unmapped.
+- Map individual variants when sizes differ.
+
+**What it can tell you**
+
+- Why Products still shows **—** on profit.
+- Which lead magnets should be digital so they stop looking like missing prices.
+
+Leave a missing blank (for example AT002 tees) unmapped rather than forcing it onto the wrong garment.
+
+---
+
+### Blanks
+
+**What it is for:** the Inkthreadable garments already seen on fulfilments. There is no public catalogue API — these rows come from orders already printed.
+
+**What you see**
+
+- Each blank, code, brand, variant count, how many shop products use it.
+- **Phased out** when Inkthreadable stopped using it. Old costs are kept.
+
+**What you can do**
+
+- Open a blank to see variants, historic unit costs, and which shop products use it.
+- From Mapping, create a blank if a SKU is missing, then set a unit cost.
+
+**What it can tell you**
+
+- What you have actually been charged for over time.
+- That a discontinued hoodie can still explain last year’s profit.
+
+---
+
+## Header extras
+
+| Control | What it does |
+| --- | --- |
+| **i** | This guide |
+| **Change password** | Set a new login (needs letters) |
+| **Admin** | Technical lists: bank rows, users, imports |
+| **Log out** | End the session |
+
+In Admin you can open one Monzo row and set its category by hand (tick **category locked**). Use that for one-off corrections such as a personal-account t-shirt transfer that must be **Direct Sales Income**.
 
 ---
 
 ## Each month
 
 1. Export the latest Monzo CSV and upload it on **Data health**.
-2. **Update Shopify**, then **Update Inkthreadable**, then **Link supplier orders**.
+2. **Update Shopify**, then **Update Inkthreadable**, then **Link supplier orders**. Leave Data health open while an update runs.
 3. Confirm new rows on **Mapping** and **Reconciliation**.
-4. Read **Cash** and **Insights**.
+4. Read **Cash**, **Expenses** and **Insights**.
 5. Download any table you want to keep.
+
+---
+
+## First-time setup (only if Cash is empty)
+
+The hosted copy already has history. If you ever stand up a blank database:
+
+1. Import bank CSV (or the Finance Dashboard `.xlsx` once).
+2. Update Shopify, then Inkthreadable.
+3. Link supplier orders.
+4. Suggest mappings; mark digital downloads.
+5. Suggest bank matches; confirm what you agree with.
 
 ---
 
@@ -188,5 +557,8 @@ What-if only. It does **not** write the books. Read the listed assumptions.
 - Invent a cost, a bank match, or a supplier link.
 - Treat Wix-era bank rows as Shopify.
 - Count a supplier refund as sales income.
+- Count a locked Salary credit as a sale (unless you recategorise it as Direct Sales Income).
+- Show excluded or transfer categories on Cash, Expenses or Insights.
 - Overwrite the Finance Dashboard workbook.
 - Write a profit figure when a cost is missing.
+- Change real books from **Simulate**.

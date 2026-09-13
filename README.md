@@ -399,6 +399,9 @@ Each stage is built, tested and verified before the next begins.
 17. ~~CSV downloads of tables (instead of an in-app AI)~~ ✅
 18. ~~Render deployment~~ ✅ — live on Render + Neon (see above)
 
+Parked follow-ups (recategorise in-app, unlock-profit queue, tax-year pack, and
+what not to build) are in [docs/FUTURE.md](docs/FUTURE.md).
+
 ---
 
 ## Principles
