@@ -66,6 +66,41 @@ def test_cash_dashboard_can_include_salary_and_tithe(client, make_txn, category_
     assert b"including salary and tithe" in shown.content
 
 
+def test_cash_and_expenses_never_name_an_excluded_category(client, make_txn, category_by_name):
+    make_txn("40.00", category=category_by_name("Shopify Payout"), counterparty="Stripe")
+    make_txn("-12.00", category=category_by_name("Apparel"), counterparty="Inkthreadable")
+    make_txn("-500.00", category=category_by_name("EXCLUDE"), counterparty="Personal")
+    make_txn("-80.00", category=category_by_name("Account Migration"), counterparty="Transfer")
+
+    cash = client.get("/?range=all")
+    spend = client.get("/expenses/?range=all")
+
+    assert cash.status_code == spend.status_code == 200
+    assert b"EXCLUDE" not in cash.content
+    assert b"Account Migration" not in cash.content
+    assert b"EXCLUDE" not in spend.content
+    assert b"Account Migration" not in spend.content
+    assert b"Apparel" in spend.content
+    assert b"Inkthreadable" in spend.content
+    assert b"Personal" not in spend.content
+
+
+def test_expenses_page_lists_every_reportable_outgoing(client, make_txn, category_by_name):
+    make_txn("-25.00", category=category_by_name("Store Hosting"), counterparty="Shopify")
+    make_txn("-50.00", category=category_by_name("Salary"), counterparty="Wages")
+    make_txn("-29.99", category=category_by_name("Sales Refund"), counterparty="Customer")
+
+    shown = client.get("/expenses/?range=all")
+    hidden = client.get("/expenses/?range=all&drawings=0")
+
+    assert shown.status_code == hidden.status_code == 200
+    assert b"True expenses" in shown.content
+    assert b"Shopify" in shown.content
+    assert b"Wages" in shown.content
+    assert b"Wages" not in hidden.content
+    assert b"reduce sales" in shown.content
+
+
 def test_cash_dashboard_does_not_offer_a_spreadsheet_mode(client, make_txn, category_by_name):
     make_txn("100.00", category=category_by_name("Income"), counterparty="Stripe")
     make_txn("30.00", category=category_by_name("Salary"), counterparty="Laura Sibanda")

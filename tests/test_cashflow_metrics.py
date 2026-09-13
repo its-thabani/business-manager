@@ -16,6 +16,7 @@ from apps.analytics.cashflow import (
     classification_differences,
     compare_periods,
     compute_cash_metrics,
+    expense_analysis,
     monthly_series,
 )
 from apps.core.periods import DateRange
@@ -179,6 +180,24 @@ class TestBreakdownsAndSeries:
         assert "Shopify Payout" not in names
         assert "Account Migration" not in names
         assert "Apparel" in names
+
+    def test_breakdown_never_mentions_excluded_or_transfer_categories(self, books):
+        names = {r["name"] for r in category_breakdown(BankTransaction.objects.in_range(JUNE))}
+        assert "EXCLUDE" not in names
+        assert "Account Migration" not in names
+        assert "Shopify Payout" in names
+
+    def test_expense_analysis_is_every_reportable_minus(self, books):
+        analysis = expense_analysis(JUNE)
+        names = {row["name"] for row in analysis.categories}
+        assert analysis.total == Decimal("335.00")
+        assert analysis.count == 6
+        assert "Apparel" in names
+        assert "Salary" in names
+        assert "EXCLUDE" not in names
+        hidden = expense_analysis(JUNE, include_drawings=False)
+        assert hidden.total == Decimal("265.00")
+        assert all(txn.category.name != "Salary" for txn in hidden.transactions)
 
     def test_monthly_series_returns_one_entry_per_month(self, books):
         series = monthly_series(DateRange(date(2026, 1, 1), date(2026, 12, 31)))

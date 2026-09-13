@@ -6,6 +6,7 @@ app_name = "web"
 
 urlpatterns = [
     path("", views.dashboard, name="dashboard"),
+    path("expenses/", views.expenses, name="expenses"),
     path("insights/", views.insights, name="insights"),
     path("integrations/", views.integrations, name="integrations"),
     path("mapping/", mapping.mapping_list, name="mapping_list"),

@@ -30,7 +30,7 @@ from apps.analytics.reconciliation import is_payout, is_supplier_charge
 from apps.core.constants import SHOPIFY_LAUNCH_DATE
 from apps.core.money import ZERO, fmt, quantise, safe_divide
 from apps.core.periods import DateRange
-from apps.finance.models import BankTransaction, CashLink
+from apps.finance.models import BankTransaction, CashLink, CategoryKind
 from apps.sales.models import Order
 
 
@@ -62,7 +62,11 @@ def build_insights(date_range: DateRange, *, range_key: str = "ytd") -> list[Ins
         .select_related("customer")
     )
     free_orders = Order.objects.countable().in_range(date_range).filter(total_price=0).count()
-    bank = list(BankTransaction.objects.in_range(date_range).select_related("category"))
+    bank = list(
+        BankTransaction.objects.in_range(date_range)
+        .exclude(category__kind__in=CategoryKind.outside_pnl())
+        .select_related("category")
+    )
 
     rows: list[Insight] = []
     _net_profit(rows, cash, range_key)
@@ -351,10 +355,14 @@ def _wix_era(rows, date_range, range_key):
         return
     if date_range.start >= SHOPIFY_LAUNCH_DATE:
         return
-    pre = BankTransaction.objects.filter(
-        occurred_on__gte=date_range.start,
-        occurred_on__lt=SHOPIFY_LAUNCH_DATE,
-    ).count()
+    pre = (
+        BankTransaction.objects.filter(
+            occurred_on__gte=date_range.start,
+            occurred_on__lt=SHOPIFY_LAUNCH_DATE,
+        )
+        .exclude(category__kind__in=CategoryKind.outside_pnl())
+        .count()
+    )
     if not pre:
         return
     rows.append(

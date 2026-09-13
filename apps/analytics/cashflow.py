@@ -191,12 +191,12 @@ def _compute_standard(base: QuerySet, metrics: CashMetrics) -> CashMetrics:
     metrics.operating_expenses = -_sum(reportable, Q(category__kind=CategoryKind.OPERATING))
     metrics.distributions = -_sum(reportable, Q(category__kind=CategoryKind.DISTRIBUTION))
 
-    metrics.transaction_count = base.count()
+    metrics.transaction_count = reportable.count()
     uncategorised = base.filter(category__isnull=True).aggregate(n=Count("pk"), total=Sum("amount"))
     metrics.uncategorised_count = uncategorised["n"] or 0
     metrics.uncategorised_value = quantise(uncategorised["total"]) if uncategorised["total"] else ZERO
     metrics.excluded_count = base.filter(category__kind__in=CategoryKind.outside_pnl()).count()
-    metrics.by_category = category_breakdown(base)
+    metrics.by_category = category_breakdown(reportable)
     return metrics
 
 
@@ -229,10 +229,12 @@ def category_breakdown(queryset: QuerySet, *, expenses_only: bool = False) -> li
     """Totals per category, ordered by magnitude.
 
     Replaces the ``Expense Summary`` sheet. Percentages are of the total spend
-    within the returned set, so they always add up to 100.
+    within the returned set, so they always add up to 100. Transfers and
+    excluded categories never appear — they are outside the books.
     """
     rows = (
         queryset.exclude(category__isnull=True)
+        .exclude(category__kind__in=CategoryKind.outside_pnl())
         .values("category__name", "category__kind", "category__colour")
         .annotate(total=Sum("amount"), count=Count("pk"))
         .order_by("category__sort_order", "category__name")
@@ -242,7 +244,7 @@ def category_breakdown(queryset: QuerySet, *, expenses_only: bool = False) -> li
     for row in rows:
         total = quantise(row["total"] or ZERO)
         kind = row["category__kind"]
-        if expenses_only and kind in (CategoryKind.REVENUE, *CategoryKind.outside_pnl()):
+        if expenses_only and kind == CategoryKind.REVENUE:
             continue
         out.append(
             {
@@ -262,6 +264,71 @@ def category_breakdown(queryset: QuerySet, *, expenses_only: bool = False) -> li
             quantise(row["magnitude"] / spend * 100) if spend else None
         )
     return sorted(out, key=lambda r: r["magnitude"], reverse=True)
+
+
+_EXPENSE_KINDS = (
+    CategoryKind.COGS,
+    CategoryKind.SHIPPING,
+    CategoryKind.FEES,
+    CategoryKind.OPERATING,
+    CategoryKind.DISTRIBUTION,
+)
+
+
+@dataclass
+class ExpenseAnalysis:
+    """Every reportable outgoing in a period — the old Expense Summary sheet."""
+
+    date_range: DateRange
+    include_drawings: bool
+    total: Decimal = ZERO
+    count: int = 0
+    refunds_out: Decimal = ZERO
+    refunds_count: int = 0
+    uncategorised_count: int = 0
+    uncategorised_value: Decimal = ZERO
+    categories: list[dict] = field(default_factory=list)
+    transactions: list = field(default_factory=list)
+
+
+def expense_analysis(
+    date_range: DateRange,
+    *,
+    include_drawings: bool = True,
+    queryset: QuerySet | None = None,
+) -> ExpenseAnalysis:
+    """Money that left the account and counts as a true expense.
+
+    Excluded and transfer rows are omitted. Customer refunds are listed
+    separately: they are money out, but they reduce sales rather than adding
+    to spend. Uncategorised minuses are shown so they can be labelled, and
+    are not added to the expense total.
+    """
+    base = (queryset if queryset is not None else BankTransaction.objects.all()).in_range(date_range)
+    reportable = base.reportable()
+    kinds = list(_EXPENSE_KINDS)
+    if not include_drawings:
+        kinds.remove(CategoryKind.DISTRIBUTION)
+
+    outgoings = (
+        reportable.filter(amount__lt=0, category__kind__in=kinds)
+        .select_related("category", "account")
+        .order_by("-occurred_on", "amount")
+    )
+    refunds = reportable.filter(amount__lt=0, category__kind=CategoryKind.REVENUE)
+    uncategorised = base.filter(category__isnull=True, amount__lt=0)
+
+    result = ExpenseAnalysis(date_range=date_range, include_drawings=include_drawings)
+    result.total = -_sum(outgoings, Q())
+    result.count = outgoings.count()
+    result.refunds_out = -_sum(refunds, Q())
+    result.refunds_count = refunds.count()
+    result.uncategorised_count = uncategorised.count()
+    uncat_total = uncategorised.aggregate(total=Sum("amount"))["total"]
+    result.uncategorised_value = quantise(uncat_total) if uncat_total is not None else ZERO
+    result.categories = category_breakdown(outgoings, expenses_only=True)
+    result.transactions = list(outgoings)
+    return result
 
 
 def monthly_series(date_range: DateRange, *, mode: str = Mode.STANDARD) -> list[dict]:

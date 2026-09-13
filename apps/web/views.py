@@ -21,6 +21,7 @@ from apps.analytics.cashflow import (
     Mode,
     compare_periods,
     compute_cash_metrics,
+    expense_analysis,
     monthly_series,
 )
 from apps.analytics.customers import compute_customer_metrics, monthly_customer_mix, rank_customers
@@ -194,6 +195,72 @@ def dashboard(request):
             "contribution_margin": metrics.contribution_margin_pct,
             "net_margin": displayed_margin,
             "categories": categories,
+        },
+    )
+
+
+def expenses(request):
+    """True expenses for a period: every reportable outgoing, by category and row."""
+    include_drawings = _flag(request, "drawings", default=True)
+    sort = request.GET.get("sort", "date")
+    if sort not in {"date", "amount", "name", "category"}:
+        sort = "date"
+
+    earliest = BankTransaction.objects.order_by("occurred_on").values_list("occurred_on", flat=True).first()
+    date_range, preset = requested_range(request.GET, earliest=earliest)
+    analysis = expense_analysis(date_range, include_drawings=include_drawings)
+
+    transactions = list(analysis.transactions)
+    if sort == "amount":
+        transactions.sort(key=lambda row: row.amount)
+    elif sort == "name":
+        transactions.sort(key=lambda row: (row.counterparty or row.description or "").casefold())
+    elif sort == "category":
+        transactions.sort(key=lambda row: ((row.category.name if row.category else ""), row.occurred_on))
+    else:
+        transactions.sort(key=lambda row: (row.occurred_on, row.amount), reverse=True)
+
+    extras = []
+    if not include_drawings:
+        extras.append("drawings=0")
+
+    if wants_csv(request):
+        return csv_response(
+            "expenses.csv",
+            ["Date", "Counterparty", "Category", "Treatment", "Amount"],
+            [
+                [
+                    txn.occurred_on.isoformat(),
+                    txn.counterparty or txn.description,
+                    txn.category.name if txn.category else "",
+                    txn.category.get_kind_display() if txn.category else "",
+                    money_cell(txn.amount),
+                ]
+                for txn in transactions
+            ],
+        )
+
+    return render(
+        request,
+        "web/expenses.html",
+        {
+            "nav": "expenses",
+            "date_range": date_range,
+            "presets": PRESETS,
+            "selected_preset": preset,
+            "include_drawings": include_drawings,
+            "extra_query": "&".join(extras),
+            "sort": sort,
+            "analysis": analysis,
+            "transactions": transactions,
+            "categories": share_bars(
+                [
+                    {"label": row["name"], "value": row["magnitude"], "colour": row["colour"]}
+                    for row in analysis.categories
+                ],
+                value_key="value",
+                limit=12,
+            ),
         },
     )
 

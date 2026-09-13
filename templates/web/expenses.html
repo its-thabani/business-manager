@@ -1,0 +1,119 @@
+{% extends "web/base.html" %}
+{% load humanize %}
+
+{% block subtitle %}
+  Expenses · {{ date_range.label }} · {{ date_range.start|date:"j M Y" }} – {{ date_range.end|date:"j M Y" }}
+{% endblock %}
+
+{% block content %}
+  {% include "web/_period.html" %}
+  {% include "web/_export.html" %}
+
+  <nav class="chips" aria-label="Salary and tithe">
+    <a class="{% if include_drawings %}on{% endif %}" href="?{{ range_query }}{% if sort != 'date' %}&amp;sort={{ sort }}{% endif %}">All true expenses</a>
+    <a class="{% if not include_drawings %}on{% endif %}" href="?{{ range_query }}&amp;drawings=0{% if sort != 'date' %}&amp;sort={{ sort }}{% endif %}">Hide salary &amp; tithe</a>
+  </nav>
+
+  <p class="muted">
+    Every amount that left the account and counts as a cost. Transfers and anything
+    marked excluded are not here — they are outside the books.
+  </p>
+
+  <div class="cards">
+    <div class="card">
+      <div class="label">True expenses</div>
+      <div class="value">£{{ analysis.total|floatformat:2 }}</div>
+      <div class="period">
+        {{ analysis.count|intcomma }} outgoing{{ analysis.count|pluralize }}
+        {% if not include_drawings %} · salary and tithe left out{% endif %}
+      </div>
+    </div>
+    <div class="card">
+      <div class="label">Customer refunds</div>
+      <div class="value">{% if analysis.refunds_count %}£{{ analysis.refunds_out|floatformat:2 }}{% else %}£0.00{% endif %}</div>
+      <div class="period">
+        {% if analysis.refunds_count %}
+          {{ analysis.refunds_count|intcomma }} refund{{ analysis.refunds_count|pluralize }} — reduce sales, not added to expenses
+        {% else %}
+          none in this period
+        {% endif %}
+      </div>
+    </div>
+    <div class="card">
+      <div class="label">Uncategorised outgoings</div>
+      <div class="value">{% if analysis.uncategorised_count %}£{{ analysis.uncategorised_value|floatformat:2 }}{% else %}£0.00{% endif %}</div>
+      <div class="period">
+        {% if analysis.uncategorised_count %}
+          {{ analysis.uncategorised_count|intcomma }} row{{ analysis.uncategorised_count|pluralize }} left out of the total until labelled
+        {% else %}
+          all outgoings have a category
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="chart" style="margin-top:1.25rem">
+    <div class="label">Where the spend went</div>
+    {% for row in categories %}
+      <div class="hbar">
+        <div class="name">{{ row.label }}</div>
+        <div class="track"><span style="width:{{ row.bar_pct }}%;background:{{ row.colour|default:'#64748b' }}"></span></div>
+        <div class="n">£{{ row.value|floatformat:0 }}</div>
+      </div>
+    {% empty %}
+      <p class="muted">No reportable expenses in this period.</p>
+    {% endfor %}
+  </div>
+
+  <h2>By category</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Category</th>
+        <th>Treatment</th>
+        <th class="num">Transactions</th>
+        <th class="num">Total</th>
+        <th class="num">Share</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in analysis.categories %}
+        <tr>
+          <td>{{ row.name }}</td>
+          <td class="muted">{{ row.kind }}</td>
+          <td class="num">{{ row.count|intcomma }}</td>
+          <td class="num neg">{{ row.total|floatformat:2 }}</td>
+          <td class="num">
+            {% if row.pct_of_total is not None %}{{ row.pct_of_total|floatformat:1 }}%{% else %}—{% endif %}
+          </td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="5" class="muted">No reportable expenses in this period.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <h2>Every outgoing</h2>
+  <table>
+    <thead>
+      <tr>
+        <th><a class="{% if sort == 'date' %}on{% endif %}" href="?{{ range_query }}{% if extra_query %}&amp;{{ extra_query }}{% endif %}&amp;sort=date">Date</a></th>
+        <th><a class="{% if sort == 'name' %}on{% endif %}" href="?{{ range_query }}{% if extra_query %}&amp;{{ extra_query }}{% endif %}&amp;sort=name">Counterparty</a></th>
+        <th><a class="{% if sort == 'category' %}on{% endif %}" href="?{{ range_query }}{% if extra_query %}&amp;{{ extra_query }}{% endif %}&amp;sort=category">Category</a></th>
+        <th class="num"><a class="{% if sort == 'amount' %}on{% endif %}" href="?{{ range_query }}{% if extra_query %}&amp;{{ extra_query }}{% endif %}&amp;sort=amount">Amount</a></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for txn in transactions %}
+        <tr>
+          <td>{{ txn.occurred_on|date:"j M Y" }}</td>
+          <td>{{ txn.counterparty|default:txn.description|default:"—" }}</td>
+          <td class="muted">{{ txn.category.name }}</td>
+          <td class="num neg">{{ txn.amount|floatformat:2 }}</td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="4" class="muted">No reportable outgoings in this period.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endblock %}

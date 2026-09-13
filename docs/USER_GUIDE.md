@@ -79,6 +79,14 @@ A dash (—) means the figure cannot be stated. The app will not pretend a missi
 
 If a yellow note says transactions have no category, open **Categories**.
 
+### Expenses
+
+Every amount that left the account and counts as a cost, for the dates you pick. This is the old Expense Summary: totals by category, then every outgoing row.
+
+Transfers and anything marked **excluded** are not on this page, or on Cash. They are outside the books.
+
+Salary and tithe are included here by default (they are real money out). Use **Hide salary & tithe** if you want operating spend only. Customer refunds are shown as a separate card — they reduce sales, they are not added to expenses.
+
 ### Categories
 
 Rules look at the bank text (for example `INKTHREADABLE` or `SHOPIFY`) and assign a category.
