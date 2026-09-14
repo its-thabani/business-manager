@@ -16,7 +16,8 @@
       <strong>First-time setup.</strong>
       Upload a bank file below
       {% if needs_shop %}and press <em>Update Shopify</em>{% endif %}.
-      Then <em>Update Inkthreadable</em>, then <em>Link supplier orders</em>.
+      Then <em>Update Inkthreadable</em>, then <em>Link supplier orders</em>
+      (that also rebuilds blanks such as AT002 / AWDis 180 from stored invoices).
       Nothing here needs a computer terminal.
     </div>
   {% endif %}
@@ -73,6 +74,11 @@
       <button class="btn" type="submit">Suggest bank matches</button>
     </form>
   </div>
+  <p class="muted">
+    <strong>Link supplier orders</strong> also rebuilds the Blanks list from invoices
+    already stored (that is how the AWDis 180 / AT002 tee appears). Then press
+    <strong>Suggest product mappings</strong>.
+  </p>
 
   <h2>Data sources</h2>
   <table>

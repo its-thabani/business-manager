@@ -199,7 +199,7 @@ To put one row in a category by hand (and lock it): **Admin → Bank transaction
 | **Import spreadsheet** | Read the Finance Dashboard `.xlsx` once for older history. The file is never overwritten. |
 | **Update Shopify** | Pull products and orders. Usually a few minutes. |
 | **Update Inkthreadable** | Pull printer fulfilments and costs. The first run can take a long time. |
-| **Link supplier orders** | Attach Inkthreadable jobs to Shopify orders using the saved refs. Does not call the API. Wix / Etsy / website jobs stay unmatched. |
+| **Link supplier orders** | Attach Inkthreadable jobs to Shopify orders using the saved refs. Also rebuilds Blanks from those invoices (AT002 / AWDis 180). Does not call the API. Wix / Etsy / website jobs stay unmatched. |
 | **Suggest product mappings** | Guess Shopify → blank matches. Confirmed mappings are left alone. |
 | **Suggest bank matches** | Suggest Stripe and Inkthreadable links. Confirmed links are left alone. |
 
@@ -464,7 +464,25 @@ Bookmark the URL to keep a scenario. Nothing is saved into the books.
 
 ### Mapping
 
-**What it is for:** telling the app which Shopify product is which Inkthreadable blank, so profit can be calculated when there is no linked fulfilment (or as a fallback).
+**What it is for:** telling the app which Shopify product is printed on which Inkthreadable garment (the “blank”), so profit can be calculated when there is no linked fulfilment — and as a fallback when there is.
+
+**How it works, in order**
+
+1. Inkthreadable invoices already in the app become rows on **Blanks** (JH001 hoodie, AT002 tee, …).
+2. On **Mapping**, each Shopify product is assigned one of those blanks.
+3. Each size/colour is matched to an Inkthreadable SKU (for example `AT002-DBL-L`) so the unit cost is the price they actually charged.
+
+**The AWDis 180 t-shirt (most StayLit tees)**
+
+That garment is Inkthreadable code **AT002**: [The AWDis 180 T-shirt](https://www.inkthreadable.co.uk/the-awdis-180-t-shirt). It does **not** appear on Blanks until invoices have been turned into catalogue rows. Inkthreadable puts the Shopify design name on the line (“Perfect Peace Graphic T-Shirt”) and the real blank in the SKU (`AT002-…`).
+
+To get it in:
+
+1. **Data health** → **Link supplier orders**. That rebuilds blanks from stored invoices. You should then see **The AWDis 180 T-shirt** / **AT002** on Blanks.
+2. **Data health** → **Suggest product mappings** (or the same button on Mapping). Confirmed maps stay put.
+3. Open **Mapping**, filter **Needs review**, and confirm the tees that now say AT002.
+
+Do not map those tees onto a hoodie or a Stanley/Stella Rocker just because that blank is in the list. If AT002 is still missing after step 1, add it on Blanks (name `The AWDis 180 T-shirt`, code `AT002`, brand `AWDis`), assign it on a product, then **Create missing variants** with the unit cost from an Inkthreadable invoice (not a guess).
 
 **What you see**
 
@@ -479,19 +497,18 @@ Bookmark the URL to keep a scenario. Nothing is saved into the books.
 - **Suggest mappings** (safe to re-run; confirmed matches stay).
 - Open a product to confirm a suggested blank, pick a blank, mark **digital / no supplier**, or leave it unmapped.
 - Map individual variants when sizes differ.
+- Create a blank on the product page if it has never been invoiced.
 
 **What it can tell you**
 
 - Why Products still shows **—** on profit.
 - Which lead magnets should be digital so they stop looking like missing prices.
 
-Leave a missing blank (for example AT002 tees) unmapped rather than forcing it onto the wrong garment.
-
 ---
 
 ### Blanks
 
-**What it is for:** the Inkthreadable garments already seen on fulfilments. There is no public catalogue API — these rows come from orders already printed.
+**What it is for:** the Inkthreadable garments this shop has been charged for, grouped by product code (AT002, JH001, STTU758, …). There is no public catalogue API.
 
 **What you see**
 
@@ -500,8 +517,10 @@ Leave a missing blank (for example AT002 tees) unmapped rather than forcing it o
 
 **What you can do**
 
+- Search by name or code (try `AT002` or `180`).
 - Open a blank to see variants, historic unit costs, and which shop products use it.
-- From Mapping, create a blank if a SKU is missing, then set a unit cost.
+- Add a blank that has never been invoiced, then assign it on Mapping and set a unit cost.
+- Rebuild from invoices via Data health → Link supplier orders.
 
 **What it can tell you**
 
@@ -526,8 +545,8 @@ In Admin you can open one Monzo row and set its category by hand (tick **categor
 ## Each month
 
 1. Export the latest Monzo CSV and upload it on **Data health**.
-2. **Update Shopify**, then **Update Inkthreadable**, then **Link supplier orders**. Leave Data health open while an update runs.
-3. Confirm new rows on **Mapping** and **Reconciliation**.
+2. **Update Shopify**, then **Update Inkthreadable**, then **Link supplier orders** (rebuilds blanks such as AT002). Leave Data health open while an update runs.
+3. **Suggest product mappings**, then confirm new rows on **Mapping** and **Reconciliation**.
 4. Read **Cash**, **Expenses** and **Insights**.
 5. Download any table you want to keep.
 

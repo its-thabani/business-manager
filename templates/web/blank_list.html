@@ -1,20 +1,57 @@
 {% extends "web/base.html" %}
 {% load humanize %}
 
-{% block subtitle %}Inkthreadable blanks already synced into this database{% endblock %}
+{% block subtitle %}Inkthreadable garments this shop has been charged for{% endblock %}
 
 {% block content %}
   <p class="period">
-    {{ blanks|length }} blanks · {{ variant_total }} supplier variants.
-    These are what the mapping page can assign a Shopify product to.
-    There is no public Inkthreadable catalogue API — these rows come from
-    orders that have already been fulfilled. Inkthreadable phases garments out;
-    a missing blank does not erase historical costs.
+    {{ blanks|length }} blank{{ blanks|length|pluralize }} shown · {{ variant_total }} size/colour rows in the catalogue.
+    Inkthreadable has no public catalogue API, so this list is built from invoices
+    already in the app. A garment only appears here after a fulfilment used it
+    <em>or</em> after you add it below.
   </p>
   <p class="muted">
-    Missing a blank (for example AT002 tees)? Open a Shopify product on
-    <a href="{% url 'web:mapping_list' %}">Mapping</a> and create it there, then set a unit cost.
+    Most StayLit tees print on the <strong>AWDis 180</strong>
+    (<a href="https://www.inkthreadable.co.uk/the-awdis-180-t-shirt">Inkthreadable page</a>,
+    code <strong>AT002</strong>). If that row is missing, go to
+    <a href="{% url 'web:integrations' %}">Data health</a> →
+    <strong>Link supplier orders</strong> (rebuilds blanks from stored invoices),
+    then <strong>Suggest product mappings</strong>. Do not map those tees onto a
+    different garment.
   </p>
+
+  <form method="get" class="custom-range" role="search">
+    <label for="blank-q">Find a blank</label>
+    <input id="blank-q" type="text" name="q" value="{{ query }}" placeholder="AT002 or AWDis 180">
+    <button class="btn" type="submit">Search</button>
+    {% if query %}<a class="period" href="{% url 'web:blank_list' %}">Clear</a>{% endif %}
+  </form>
+
+  <h2>Add a blank that has never been invoiced</h2>
+  <div class="card">
+    <p class="muted">
+      Use this only when Inkthreadable has never billed that code, so Link supplier
+      orders cannot create it. You still assign it to each Shopify product on
+      <a href="{% url 'web:mapping_list' %}">Mapping</a> and set a unit cost.
+    </p>
+    <form method="post" class="actions">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="create_blank">
+      <div>
+        <label for="blank-name">Name</label>
+        <input id="blank-name" type="text" name="name" placeholder="The AWDis 180 T-shirt" required>
+      </div>
+      <div>
+        <label for="blank-id">Code</label>
+        <input id="blank-id" type="text" name="supplier_id" placeholder="AT002">
+      </div>
+      <div>
+        <label for="blank-brand">Brand</label>
+        <input id="blank-brand" type="text" name="brand" placeholder="AWDis">
+      </div>
+      <button class="btn" type="submit">Add blank</button>
+    </form>
+  </div>
 
   <h2>Blanks</h2>
   <table>
@@ -39,7 +76,10 @@
           <td>{% if blank.is_discontinued %}<span class="pill warn">phased out</span>{% endif %}</td>
         </tr>
       {% empty %}
-        <tr><td colspan="6" class="muted">No supplier products yet. Run <code>manage.py sync_inkthreadable</code>.</td></tr>
+        <tr><td colspan="6" class="muted">
+          {% if query %}No blank matches “{{ query }}”.{% else %}
+          No supplier products yet. Run <strong>Link supplier orders</strong> on Data health.{% endif %}
+        </td></tr>
       {% endfor %}
     </tbody>
   </table>

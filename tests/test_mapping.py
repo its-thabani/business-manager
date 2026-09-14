@@ -74,7 +74,9 @@ def _shop_product(title, variants, product_type="Hoodie", **kwargs):
 
 def test_sku_tokens_ignore_order():
     assert sku_tokens("JH001-JBK-XS") == ("JH001", frozenset({"JBK", "XS"}))
+    assert sku_tokens("OLD-JH001-JBK-M") == ("JH001", frozenset({"JBK", "M"}))
     assert sku_token_match("JH001-JBK-XS", "JH001-XS-JBK")
+    assert sku_token_match("AT002-DBL-L", "OLD-AT002-L-DBL")
     assert not sku_token_match("JH001-JBK-XS", "JH030-JBK-XS")
 
 

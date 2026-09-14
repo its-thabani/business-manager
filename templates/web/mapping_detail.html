@@ -78,13 +78,13 @@
   {% if not mapping.no_supplier %}
     <h2>Blank missing from the catalogue?</h2>
     <div class="card">
-      <p class="muted">Use this for garments Inkthreadable has never invoiced, so they never appeared in a sync — e.g. AT002 tees.</p>
+      <p class="muted">Use this for a garment Inkthreadable has never invoiced (so Link supplier orders cannot create it). Most StayLit tees are AT002 — The AWDis 180 T-shirt. If that blank is missing from the list above, create it here or rebuild blanks on Data health first.</p>
       <form method="post" class="actions">
         {% csrf_token %}
         <input type="hidden" name="action" value="create_blank">
         <div>
           <label for="blank-name">Name</label>
-          <input id="blank-name" type="text" name="name" placeholder="AWDis T-Shirt" required>
+          <input id="blank-name" type="text" name="name" placeholder="The AWDis 180 T-shirt" required>
         </div>
         <div>
           <label for="blank-id">Code</label>

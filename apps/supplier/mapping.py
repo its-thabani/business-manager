@@ -133,6 +133,10 @@ def sku_tokens(sku: str) -> tuple[str, frozenset[str]] | None:
     parts = [p for p in (sku or "").upper().replace("_", "-").split("-") if p]
     if not parts:
         return None
+    if parts[0] == "OLD":
+        parts = parts[1:]
+    if not parts:
+        return None
     return parts[0], frozenset(parts[1:])
 
 

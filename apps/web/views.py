@@ -388,7 +388,11 @@ def _integrations_post(request):
             (
                 f"Linked {result['linked']} Inkthreadable order(s) to Shopify. "
                 f"{result['already']} already linked, {result['unmatched']} left unmatched "
-                f"(Wix, Etsy and website jobs stay unmatched — not guessed)."
+                f"(Wix, Etsy and website jobs stay unmatched — not guessed). "
+                f"Blanks refreshed from stored invoices "
+                f"(+{result.get('blanks_added', 0)} blanks, "
+                f"+{result.get('variants_added', 0)} size/colour rows). "
+                f"Then press Suggest product mappings so AT002 tees can be assigned."
             ),
         )
         return redirect("web:integrations")

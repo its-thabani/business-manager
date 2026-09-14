@@ -210,6 +210,8 @@ def test_blanks_catalogue_lists_inkthreadable_products(client, map_variant, make
     assert listing.status_code == 200
     assert b"Creator 2.0" in listing.content
     assert b"Stanley/Stella" in listing.content
+    assert b"AT002" in listing.content
+    assert b"AWDis 180" in listing.content
 
     blank_id = product.variants.get().supplier_mapping.supplier_variant.product_id
     detail = client.get(f"/mapping/blanks/{blank_id}/")

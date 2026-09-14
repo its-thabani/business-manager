@@ -351,19 +351,43 @@ def _product_variant(product: Product, variant_id) -> ProductVariant:
 
 def blank_list(request):
     """Inkthreadable blanks already in the database, for mapping later."""
-    blanks = (
-        SupplierProduct.objects.annotate(
-            variant_count=Count("variants"),
-            mapped_products=Count("product_mappings", distinct=True),
+    if request.method == "POST" and request.POST.get("action") == "create_blank":
+        name = (request.POST.get("name") or "").strip()
+        if not name:
+            messages.error(request, "A blank needs a name.")
+            return redirect("web:blank_list")
+        code = (request.POST.get("supplier_id") or "").strip()
+        if code and SupplierProduct.objects.filter(supplier_id=code).exists():
+            messages.error(request, f"A blank with code {code} is already in the list.")
+            return redirect("web:blank_list")
+        blank = create_supplier_blank(
+            name=name,
+            supplier_id=code,
+            brand=request.POST.get("brand", ""),
         )
-        .order_by("name")
+        messages.success(
+            request,
+            f"Created {blank}. Open a t-shirt on Mapping, assign this blank, then create missing sizes with a unit cost.",
+        )
+        return redirect("web:blank_detail", pk=blank.pk)
+
+    query = (request.GET.get("q") or "").strip()
+    blanks = SupplierProduct.objects.annotate(
+        variant_count=Count("variants"),
+        mapped_products=Count("product_mappings", distinct=True),
     )
+    if query:
+        blanks = blanks.filter(
+            Q(name__icontains=query) | Q(supplier_id__icontains=query) | Q(brand__icontains=query)
+        )
+    blanks = blanks.order_by("name")
     return render(
         request,
         "web/blank_list.html",
         {
             "nav": "blanks",
             "blanks": blanks,
+            "query": query,
             "variant_total": SupplierVariant.objects.count(),
         },
     )

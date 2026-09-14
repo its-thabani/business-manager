@@ -2,16 +2,20 @@
 
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime, timezone as dt_timezone
 from decimal import Decimal
 
 import pytest
 
 from apps.catalog.models import Product, ProductVariant
-from apps.integrations.inkthreadable.sync import relink_supplier_orders, upsert_supplier_order
+from apps.integrations.inkthreadable.sync import (
+    rebuild_blanks_from_stored_orders,
+    relink_supplier_orders,
+    upsert_supplier_order,
+)
 from apps.integrations.shopify.sync import upsert_order, upsert_product
 from apps.sales.models import Order
-from apps.supplier.models import SupplierOrder, SupplierVariant
+from apps.supplier.models import SupplierOrder, SupplierProduct, SupplierVariant
 
 
 def product_payload(**overrides) -> dict:
@@ -210,9 +214,73 @@ class TestInkthreadableUpsert:
         assert variant.size == "L"
         assert variant.colour == "Black"
         assert variant.current_cost == Decimal("9.10")
+        assert variant.product.supplier_id == "STTU169"
+        assert variant.product.name == "Creator 2.0"
 
         upsert_supplier_order(payload)
         assert SupplierOrder.objects.count() == 1
+
+    def test_awdis_180_lines_group_onto_at002_not_the_shopify_title(self):
+        """Inkthreadable stores the design name; the blank is the SKU prefix."""
+        for i, (title, pn, price) in enumerate(
+            (
+                ("Perfect Peace Graphic T-Shirt - S / White / Marbled Earth", "AT002-ACW-S", 13.44),
+                ("Isaiah 9:6 Messiah T-Shirt - M / Black", "AT002-DBL-M", 13.44),
+            ),
+            start=1,
+        ):
+            upsert_supplier_order(
+                {
+                    "id": 9100 + i,
+                    "external_id": f"#{pn}",
+                    "created_at": "2026-09-01T12:00:00Z",
+                    "status": "shipped",
+                    "summary": {"subtotalPrice": price, "shippingPrice": 3.20, "total": price + 3.20},
+                    "items": [
+                        {
+                            "pn": pn,
+                            "title": title,
+                            "price": price,
+                            "quantity": 1,
+                            "options": [
+                                {"type": "Colour", "value": "Arctic White" if "ACW" in pn else "Black"},
+                                {"type": "Size", "value": "Small" if pn.endswith("S") else "Medium"},
+                            ],
+                        }
+                    ],
+                }
+            )
+
+        blank = SupplierProduct.objects.get(supplier_id="AT002")
+        assert blank.name == "The AWDis 180 T-shirt"
+        assert blank.brand == "AWDis"
+        assert blank.variants.count() == 2
+        assert not SupplierProduct.objects.filter(name__icontains="Perfect Peace").exists()
+        assert SupplierVariant.objects.get(sku="AT002-ACW-S").current_cost == Decimal("13.44")
+
+    def test_rebuild_blanks_from_stored_orders_creates_at002(self):
+        SupplierOrder.objects.create(
+            supplier_reference="at002-rebuild",
+            placed_at=datetime(2026, 9, 1, 12, 0, tzinfo=dt_timezone.utc),
+            raw={
+                "items": [
+                    {
+                        "pn": "AT002-DBL-L",
+                        "title": "He Loved Me First Christian Graphic T-Shirt - L / Black",
+                        "price": "13.44",
+                        "options": [
+                            {"type": "Colour", "value": "Black"},
+                            {"type": "Size", "value": "Large"},
+                        ],
+                    }
+                ]
+            },
+        )
+        result = rebuild_blanks_from_stored_orders()
+        assert result["failed"] == 0
+        blank = SupplierProduct.objects.get(supplier_id="AT002")
+        assert blank.name == "The AWDis 180 T-shirt"
+        assert SupplierVariant.objects.get(sku="AT002-DBL-L").current_cost == Decimal("13.44")
 
     def test_a_shopify_order_is_linked_by_external_id(self, make_product, make_order):
         product = make_product()

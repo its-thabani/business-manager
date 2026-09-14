@@ -29,6 +29,17 @@ from apps.supplier.models import (
 
 logger = logging.getLogger(__name__)
 
+# Inkthreadable's line ``title`` is often the Shopify design name
+# ("Perfect Peace Graphic T-Shirt - S / White"), not the blank
+# ("The AWDis 180 T-shirt"). Group catalogue rows by the product code
+# in ``pn`` (AT002, JH001, …) so Mapping can actually find the garment.
+KNOWN_BLANKS = {
+    "AT002": ("The AWDis 180 T-shirt", "AWDis"),
+    "AT001": ("AWDis T-shirt", "AWDis"),
+    "JH001": ("AWDis College Hoodie", "AWDis"),
+    "JH030": ("AWDis Sweatshirt", "AWDis"),
+}
+
 _STATUS = {
     "received": SupplierOrderStatus.PENDING,
     "in progress": SupplierOrderStatus.IN_PRODUCTION,
@@ -58,6 +69,70 @@ def _option(item: dict, *names: str) -> str:
     return ""
 
 
+def garment_code(sku: str) -> str:
+    """Inkthreadable product code from a variant SKU.
+
+    ``AT002-DBL-L`` → ``AT002``. ``OLD-JH001-JBK-M`` → ``JH001``.
+    """
+    parts = [p for p in (sku or "").upper().replace("_", "-").split("-") if p]
+    if parts and parts[0] == "OLD":
+        parts = parts[1:]
+    if not parts:
+        return ""
+    if parts[0] == "AS" and len(parts) > 1:
+        return f"{parts[0]}-{parts[1]}"
+    return parts[0]
+
+
+def _looks_like_shopify_line_title(title: str) -> bool:
+    """True when Inkthreadable stored the shop design, not the blank name."""
+    return " / " in title and " - " in title
+
+
+def _supplier_product_for_item(*, sku: str, title: str) -> SupplierProduct:
+    code = garment_code(sku)
+    known_name, known_brand = KNOWN_BLANKS.get(code, ("", ""))
+    if code:
+        found = SupplierProduct.objects.filter(supplier_id=code).first()
+        if found:
+            return found
+        if known_name:
+            found = SupplierProduct.objects.filter(name=known_name).first()
+            if found:
+                _stamp_blank_identity(found, code=code, brand=known_brand)
+                return found
+
+    if known_name:
+        name = known_name
+    elif title and not _looks_like_shopify_line_title(title):
+        name = title.strip()
+    else:
+        name = code or title.strip() or "Unknown garment"
+
+    product = SupplierProduct.objects.filter(name=name).first()
+    if product is None:
+        return SupplierProduct.objects.create(
+            name=name[:300],
+            supplier_id=code,
+            brand=known_brand,
+        )
+    _stamp_blank_identity(product, code=code, brand=known_brand)
+    return product
+
+
+def _stamp_blank_identity(product: SupplierProduct, *, code: str, brand: str) -> None:
+    fields = []
+    if code and not product.supplier_id:
+        product.supplier_id = code
+        fields.append("supplier_id")
+    if brand and not product.brand:
+        product.brand = brand
+        fields.append("brand")
+    if fields:
+        fields.append("updated_at")
+        product.save(update_fields=fields)
+
+
 def upsert_supplier_variant(item: dict, *, when) -> SupplierVariant | None:
     """Create or update the catalogue row implied by one order line."""
     sku = (item.get("pn") or item.get("sku") or "").strip()
@@ -69,11 +144,7 @@ def upsert_supplier_variant(item: dict, *, when) -> SupplierVariant | None:
     if not sku and not title:
         return None
 
-    product = SupplierProduct.objects.filter(name=title).first()
-    if product is None:
-        # Do not reuse a SKU prefix as supplier_id: many garments share a
-        # prefix and the column is unique when non-empty.
-        product = SupplierProduct.objects.create(name=title)
+    product = _supplier_product_for_item(sku=sku, title=title)
     # Seeing it on a new order means it is still in use. Never delete an old
     # blank — Inkthreadable phases garments out, and historical costs must stay.
     product.last_synced_at = timezone.now()
@@ -152,12 +223,45 @@ def match_shopify_order(payload: dict) -> Order | None:
     return None
 
 
+def rebuild_blanks_from_stored_orders() -> dict[str, int]:
+    """Derive blanks and costs from Inkthreadable payloads already in the database.
+
+    Does not call the API. Needed because orders can be loaded (or synced
+    incrementally) without ever creating catalogue rows — which is how AT002
+    tees were invoiced but missing from Mapping.
+    """
+    created_before = SupplierProduct.objects.count()
+    variants_before = SupplierVariant.objects.count()
+    items = 0
+    failed = 0
+    for record in SupplierOrder.objects.iterator():
+        when = local_date(record.placed_at) if record.placed_at else None
+        for item in (record.raw or {}).get("items") or []:
+            items += 1
+            try:
+                upsert_supplier_variant(item, when=when)
+            except Exception:
+                failed += 1
+                logger.exception(
+                    "inkthreadable: failed to rebuild variant from order %s",
+                    record.supplier_reference,
+                )
+    return {
+        "items": items,
+        "failed": failed,
+        "blanks_added": SupplierProduct.objects.count() - created_before,
+        "variants_added": SupplierVariant.objects.count() - variants_before,
+    }
+
+
 def relink_supplier_orders() -> dict[str, int]:
     """Attach stored Inkthreadable orders to Shopify using the saved payload.
 
     Does not call the API and does not invent matches. Existing links are left
-    alone. Safe to re-run after a Shopify sync lands new order names.
+    alone. Also rebuilds blanks from those payloads so Mapping has AT002 etc.
+    Safe to re-run after a Shopify sync lands new order names.
     """
+    blanks = rebuild_blanks_from_stored_orders()
     linked = 0
     already = 0
     unmatched = 0
@@ -172,7 +276,13 @@ def relink_supplier_orders() -> dict[str, int]:
         record.order = order
         record.save(update_fields=["order", "updated_at"])
         linked += 1
-    return {"linked": linked, "already": already, "unmatched": unmatched}
+    return {
+        "linked": linked,
+        "already": already,
+        "unmatched": unmatched,
+        "blanks_added": blanks["blanks_added"],
+        "variants_added": blanks["variants_added"],
+    }
 
 
 def upsert_supplier_order(payload: dict) -> tuple[SupplierOrder, bool]:

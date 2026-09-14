@@ -17,5 +17,7 @@ class Command(BaseCommand):
         result = relink_supplier_orders()
         self.stdout.write(
             f"linked={result['linked']} already={result['already']} "
-            f"unmatched={result['unmatched']}"
+            f"unmatched={result['unmatched']} "
+            f"blanks_added={result.get('blanks_added', 0)} "
+            f"variants_added={result.get('variants_added', 0)}"
         )
