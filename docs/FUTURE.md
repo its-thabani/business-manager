@@ -18,13 +18,11 @@ autosuggest overwrite a confirmed map or cash link.
 
 These remove leftover friction. Prefer them over new pages that restate Cash.
 
-### Recategorise a bank row in the app
+### ~~Recategorise a bank row in the app~~
 
-Today a one-off (for example a t-shirt paid to a personal account, then
-transferred in) means **Admin → Bank transactions**.
-
-Add on Cash or Expenses: click a row → pick category → lock. That is the last
-reason Laura needs Admin for the books.
+Shipped: category dropdown on each Expenses row (locks as a manual choice).
+**Apply rules** updates spreadsheet labels when a rule matches; hand-set
+categories stay locked.
 
 ### “Unlock profit” / uncategorised queue
 

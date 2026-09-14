@@ -17,6 +17,7 @@
   <p class="muted">
     Every amount that left the account and counts as a cost. Transfers and anything
     marked excluded are not here — they are outside the books.
+    Change a row’s category here to override a rule (that choice is locked).
   </p>
 
   <div class="cards">
@@ -108,7 +109,21 @@
         <tr>
           <td>{{ txn.occurred_on|date:"j M Y" }}</td>
           <td>{{ txn.counterparty|default:txn.description|default:"—" }}</td>
-          <td class="muted">{{ txn.category.name }}</td>
+          <td>
+            <form class="cat-form" method="post" action="?{{ range_query }}{% if extra_query %}&amp;{{ extra_query }}{% endif %}{% if sort != 'date' %}&amp;sort={{ sort }}{% endif %}">
+              {% csrf_token %}
+              <input type="hidden" name="action" value="set_category">
+              <input type="hidden" name="txn_id" value="{{ txn.pk }}">
+              <label class="sr-only" for="cat-{{ txn.pk }}">Category</label>
+              <select id="cat-{{ txn.pk }}" name="category">
+                <option value=""{% if not txn.category_id %} selected{% endif %}>Uncategorised</option>
+                {% for category in category_choices %}
+                  <option value="{{ category.pk }}"{% if txn.category_id == category.pk %} selected{% endif %}>{{ category.name }}</option>
+                {% endfor %}
+              </select>
+              <button class="btn" type="submit">Set</button>
+            </form>
+          </td>
           <td class="num neg">{{ txn.amount|floatformat:2 }}</td>
         </tr>
       {% empty %}

@@ -215,13 +215,15 @@ The sign restriction matters more than it looks. Both a Shopify payout and the
 Shopify subscription contain "SHOPIFY"; only the direction of the money separates
 revenue from a hosting cost.
 
-**Manual decisions are never overwritten.** Setting a category by hand locks it.
-Categories imported from the spreadsheet are locked too, since they reflect real
-review. Re-running the rules reports how many locked rows it skipped.
+**Manual decisions are never overwritten.** Setting a category by hand on
+Expenses locks it. Spreadsheet labels are starting points: **Apply rules**
+will replace them when a more specific rule matches (for example HMRC → Tax).
+Monzo CSV import only fills uncategorised gaps, so it does not silently rewrite
+existing books.
 
-All 31 rules from the `Categorisation` sheet are seeded, plus two additions
-(prefixed `ADDED` in their names) for Stripe settlements, which were missing from
-the sheet and so had to be categorised by hand every month.
+All 31 rules from the `Categorisation` sheet are seeded, plus additions
+(prefixed `ADDED` in their names) for Stripe settlements, Facebook ads, and
+HMRC tax payments.
 
 Running the rules against the rows already categorised in the spreadsheet gives
 **89.5% agreement on financial treatment**. Of the remainder, 263 rows match no
@@ -399,8 +401,8 @@ Each stage is built, tested and verified before the next begins.
 17. ~~CSV downloads of tables (instead of an in-app AI)~~ ✅
 18. ~~Render deployment~~ ✅ — live on Render + Neon (see above)
 
-Parked follow-ups (recategorise in-app, unlock-profit queue, tax-year pack, and
-what not to build) are in [docs/FUTURE.md](docs/FUTURE.md).
+Parked follow-ups (unlock-profit queue, tax-year pack, and what not to build)
+are in [docs/FUTURE.md](docs/FUTURE.md).
 
 ---
 

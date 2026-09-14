@@ -119,6 +119,7 @@ Money paid to a personal account and then transferred in (for example a t-shirt 
 - **All true expenses** includes salary and tithe (they did leave the account).
 - **Hide salary & tithe** for operating spend only.
 - Sort the outgoing list by date, name, category or amount.
+- Change the category on any row (that choice is locked so Apply rules will not undo it).
 - Download every outgoing row.
 
 **What it can tell you**
@@ -175,7 +176,7 @@ Confirmed links are **not** overwritten the next time suggestions run.
 
 - Add a rule: pattern (for example `INKTHREADABLE`), match type, which text to look at, money in / money out / either, category, priority, optional name.
 - Click a rule to edit it.
-- **Apply rules** — fills gaps only. It never overwrites a category you set by hand, or one imported from the spreadsheet.
+- **Apply rules** — assigns matching categories. It never overwrites a category you set by hand on Expenses. Spreadsheet labels such as Expenditure **are** updated when a new rule matches (for example HMRC → Tax).
 
 **How rules work**
 
@@ -183,7 +184,7 @@ Confirmed links are **not** overwritten the next time suggestions run.
 - Matching ignores case and extra spaces.
 - **Direction** matters: Shopify payouts and the Shopify subscription both say “SHOPIFY”. Money in vs money out is what separates revenue from hosting.
 
-To put one row in a category by hand (and lock it): **Admin → Bank transactions**.
+To put one row in a category by hand (and lock it): use the category menu on **Expenses**.
 
 ---
 

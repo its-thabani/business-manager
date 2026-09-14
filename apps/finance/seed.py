@@ -171,6 +171,13 @@ CATEGORIES: tuple[CategorySeed, ...] = (
         colour="#64748B",
         sort_order=34,
     ),
+    CategorySeed(
+        "Tax",
+        CategoryKind.OPERATING,
+        "HMRC, VAT, corporation tax and other tax payments",
+        colour="#57534E",
+        sort_order=35,
+    ),
     # --- Owner distributions: excluded from the "exc. salary & tithe" view ---
     CategorySeed(
         "Salary",
@@ -283,6 +290,20 @@ ADDED_RULES: tuple[RuleSeed, ...] = (
         name="ADDED — Shopify subscription charge",
         amount_condition=AmountCondition.NEGATIVE,
         priority=20,
+    ),
+    RuleSeed(
+        "Facebook",
+        "Marketing",
+        name="ADDED — Facebook / Meta ads",
+        amount_condition=AmountCondition.NEGATIVE,
+        priority=30,
+    ),
+    RuleSeed(
+        "HMRC",
+        "Tax",
+        name="ADDED — HMRC tax payments",
+        amount_condition=AmountCondition.NEGATIVE,
+        priority=40,
     ),
 )
 

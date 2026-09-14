@@ -8,7 +8,7 @@ from decimal import Decimal
 import pytest
 
 from apps.catalog.models import ProductGroup
-from apps.finance.models import CategoryRule
+from apps.finance.models import CategoryRule, CategorySource
 from apps.sales.models import Customer
 from apps.supplier.models import SupplierOrder
 from apps.web.charts import column_chart, share_bars
@@ -99,6 +99,42 @@ def test_expenses_page_lists_every_reportable_outgoing(client, make_txn, categor
     assert b"Wages" in shown.content
     assert b"Wages" not in hidden.content
     assert b"reduce sales" in shown.content
+    assert b'name="category"' in shown.content
+    assert b"Set" in shown.content
+
+
+def test_expenses_page_can_override_a_row_category(client, make_txn, category_by_name):
+    txn = make_txn("-1.81", category=category_by_name("Expenditure"), counterparty="HMRC")
+    tax = category_by_name("Tax")
+
+    response = client.post(
+        "/expenses/?range=all",
+        {"action": "set_category", "txn_id": str(txn.pk), "category": str(tax.pk)},
+    )
+
+    assert response.status_code == 302
+    txn.refresh_from_db()
+    assert txn.category_id == tax.pk
+    assert txn.category_source == CategorySource.MANUAL
+    assert txn.is_category_locked is True
+
+
+def test_apply_rules_from_categories_recategorises_imported_hmrc(client, make_txn, category_by_name):
+    txn = make_txn(
+        "-1.81",
+        counterparty="HMRC",
+        category=category_by_name("Expenditure"),
+        category_source=CategorySource.IMPORTED,
+        is_category_locked=True,
+    )
+
+    response = client.post("/categories/", {"action": "apply"})
+
+    assert response.status_code == 302
+    txn.refresh_from_db()
+    assert txn.category.name == "Tax"
+    assert txn.category_source == CategorySource.RULE
+    assert txn.is_category_locked is False
 
 
 def test_cash_dashboard_does_not_offer_a_spreadsheet_mode(client, make_txn, category_by_name):

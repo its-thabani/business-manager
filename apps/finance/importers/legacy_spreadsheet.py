@@ -323,9 +323,9 @@ def _import_sheet(
                 currency="GBP",
                 category=category,
                 category_source=CategorySource.IMPORTED if category else CategorySource.UNCATEGORISED,
-                # The spreadsheet's categories are the result of the owner's own
-                # review, so they are treated as decisions to preserve rather
-                # than guesses to overwrite when rules are re-run.
+                # Spreadsheet labels are the starting point. Monzo import must
+                # not overwrite them; Apply rules can, so a new HMRC → Tax
+                # rule replaces a generic Expenditure label.
                 is_category_locked=bool(category),
                 raw={"sheet": sheet.title, "row": row_number, "values": [_json_safe(v) for v in row]},
             )

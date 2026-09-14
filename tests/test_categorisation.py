@@ -175,11 +175,10 @@ class TestLocksAndReruns:
         assert txn.category is None
         assert txn.category_source == CategorySource.UNCATEGORISED
 
-    def test_imported_spreadsheet_categories_are_never_silently_replaced(self, seeded, make_txn):
-        # The spreadsheet's categories reflect the owner's own review.
+    def test_imported_spreadsheet_categories_are_kept_when_no_rule_matches(self, seeded, make_txn):
         txn = make_txn(
             "-13.96",
-            counterparty="Inkthreadable",
+            counterparty="One-off shop with no rule",
             category=Category.objects.get(name="Stationery"),
             category_source=CategorySource.IMPORTED,
             is_category_locked=True,
@@ -187,6 +186,35 @@ class TestLocksAndReruns:
         categorise()
         txn.refresh_from_db()
         assert txn.category.name == "Stationery"
+        assert txn.category_source == CategorySource.IMPORTED
+
+    def test_apply_rules_replaces_imported_expenditure_when_hmrc_matches(self, seeded, make_txn):
+        txn = make_txn(
+            "-1.81",
+            counterparty="HMRC",
+            when=date(2026, 4, 13),
+            category=Category.objects.get(name="Expenditure"),
+            category_source=CategorySource.IMPORTED,
+            is_category_locked=True,
+        )
+        result = categorise()
+        txn.refresh_from_db()
+        assert txn.category.name == "Tax"
+        assert txn.category_source == CategorySource.RULE
+        assert txn.is_category_locked is False
+        assert result.changed == 1
+
+    def test_apply_rules_labels_facebook_ads_as_marketing(self, seeded, make_txn):
+        txn = make_txn(
+            "-12.00",
+            counterparty="Facebook",
+            category=Category.objects.get(name="Expenditure"),
+            category_source=CategorySource.IMPORTED,
+            is_category_locked=True,
+        )
+        categorise()
+        txn.refresh_from_db()
+        assert txn.category.name == "Marketing"
 
     def test_rerunning_is_idempotent(self, seeded, make_txn):
         make_txn("-13.96", counterparty="Inkthreadable")

@@ -68,7 +68,15 @@ from apps.core.money import ZERO, fmt
 from apps.core.periods import PRESETS, requested_range
 from apps.finance.categorisation import categorise
 from apps.finance.importers import import_finance_dashboard, import_monzo_csv
-from apps.finance.models import BankAccount, BankTransaction, CashLink, ImportBatch, TransactionSource
+from apps.finance.models import (
+    BankAccount,
+    BankTransaction,
+    CashLink,
+    Category,
+    CategoryKind,
+    ImportBatch,
+    TransactionSource,
+)
 from apps.finance.seed import seed_all
 from apps.integrations.inkthreadable.sync import relink_supplier_orders, sync_orders as sync_inkthreadable_orders
 from apps.integrations.jobs import is_sync_running, start_job
@@ -201,6 +209,19 @@ def dashboard(request):
 
 def expenses(request):
     """True expenses for a period: every reportable outgoing, by category and row."""
+    if request.method == "POST" and request.POST.get("action") == "set_category":
+        txn = get_object_or_404(BankTransaction, pk=request.POST.get("txn_id"))
+        raw_category = (request.POST.get("category") or "").strip()
+        if raw_category:
+            category = get_object_or_404(Category, pk=raw_category, is_active=True)
+            txn.set_manual_category(category)
+            messages.success(request, f"{txn.display_name} is now {category.name}.")
+        else:
+            txn.set_manual_category(None)
+            messages.success(request, f"{txn.display_name} has no category.")
+        query = request.GET.urlencode()
+        return redirect(f"{request.path}?{query}" if query else request.path)
+
     include_drawings = _flag(request, "drawings", default=True)
     sort = request.GET.get("sort", "date")
     if sort not in {"date", "amount", "name", "category"}:
@@ -253,6 +274,9 @@ def expenses(request):
             "sort": sort,
             "analysis": analysis,
             "transactions": transactions,
+            "category_choices": Category.objects.filter(is_active=True)
+            .exclude(kind__in=(CategoryKind.EXCLUDED, CategoryKind.TRANSFER))
+            .order_by("sort_order", "name"),
             "categories": share_bars(
                 [
                     {"label": row["name"], "value": row["magnitude"], "colour": row["colour"]}

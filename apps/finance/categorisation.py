@@ -1,8 +1,9 @@
 """The transaction categorisation engine.
 
 Rules are stored in the database and evaluated in priority order, first match
-wins. Re-running is always safe: transactions whose category was set by hand are
-locked and are never overwritten.
+wins. Re-running is always safe: a category set by hand on Expenses is locked
+and is never overwritten. Spreadsheet labels are starting points — Apply rules
+can replace them when a more specific rule matches.
 """
 
 from __future__ import annotations
@@ -71,8 +72,9 @@ def categorise(
 
     Args:
         queryset: Transactions to process. Defaults to all of them.
-        respect_locks: Leave manually categorised transactions untouched. Turning
-            this off will discard manual decisions, so it is opt-in.
+        respect_locks: Leave rows set by hand on Expenses untouched. Spreadsheet
+            (imported) categories are updated when you click Apply rules, so a
+            new HMRC → Tax rule can replace a generic Expenditure label.
         only_uncategorised: Only fill in gaps, never revisit existing categories.
             Useful after adding a rule for a previously unrecognised payee.
         record_run: Write a ``CategorisationRun`` audit row.
@@ -93,7 +95,7 @@ def categorise(
     for txn in queryset.select_related("category", "matched_rule").iterator(chunk_size=500):
         result.examined += 1
 
-        if respect_locks and txn.is_category_locked:
+        if respect_locks and txn.is_category_locked and txn.category_source == CategorySource.MANUAL:
             result.locked_skipped += 1
             if txn.category_id is None:
                 result.uncategorised += 1
@@ -116,6 +118,7 @@ def categorise(
         matched_rules[rule.pk] = rule
 
         if txn.apply_category(rule.category, CategorySource.RULE, rule):
+            txn.is_category_locked = False
             to_update.append(txn)
             result.changed += 1
 
@@ -150,5 +153,5 @@ def categorise(
 def _flush(batch: list[BankTransaction]) -> None:
     if batch:
         BankTransaction.objects.bulk_update(
-            batch, ["category", "category_source", "matched_rule", "updated_at"]
+            batch, ["category", "category_source", "matched_rule", "is_category_locked", "updated_at"]
         )

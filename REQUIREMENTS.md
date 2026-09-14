@@ -73,6 +73,7 @@ Bank figures must remain usable even when Shopify or Inkthreadable data is thin.
 - [x] All monthly updates from Data health (Shopify, Inkthreadable, linking, uploads)
 - [x] Change password in the app header (and Django Admin → Users)
 - [x] Expenses page: every reportable outgoing for a period (`/expenses/`); excluded/transfer omitted
+- [x] Recategorise a bank row on Expenses (locks); Apply rules updates spreadsheet labels when a rule matches
 
 ### Login and Render
 
