@@ -199,7 +199,7 @@ To put one row in a category by hand (and lock it): **Admin → Bank transaction
 | **Import spreadsheet** | Read the Finance Dashboard `.xlsx` once for older history. The file is never overwritten. |
 | **Update Shopify** | Pull products and orders. Usually a few minutes. |
 | **Update Inkthreadable** | Pull printer fulfilments and costs. The first run can take a long time. |
-| **Link supplier orders** | Attach Inkthreadable jobs to Shopify orders using the saved refs. Also rebuilds Blanks from those invoices (AT002 / AWDis 180). Does not call the API. Wix / Etsy / website jobs stay unmatched. |
+| **Link supplier orders** | Attach Inkthreadable jobs to Shopify orders using the saved refs. Also rebuilds Blanks from those invoices (AT002 / AWDis 180). Leave the page open; it refreshes until it finishes. Does not call the API. Wix / Etsy / website jobs stay unmatched. |
 | **Suggest product mappings** | Guess Shopify → blank matches. Confirmed mappings are left alone. |
 | **Suggest bank matches** | Suggest Stripe and Inkthreadable links. Confirmed links are left alone. |
 
@@ -478,7 +478,7 @@ That garment is Inkthreadable code **AT002**: [The AWDis 180 T-shirt](https://ww
 
 To get it in:
 
-1. **Data health** → **Link supplier orders**. That rebuilds blanks from stored invoices. You should then see **The AWDis 180 T-shirt** / **AT002** on Blanks.
+1. **Data health** → **Link supplier orders**. Leave the page open until it finishes. That rebuilds blanks from stored invoices. You should then see **The AWDis 180 T-shirt** / **AT002** on Blanks.
 2. **Data health** → **Suggest product mappings** (or the same button on Mapping). Confirmed maps stay put.
 3. Open **Mapping**, filter **Needs review**, and confirm the tees that now say AT002.
 

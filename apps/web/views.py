@@ -382,19 +382,15 @@ def integrations(request):
 def _integrations_post(request):
     action = request.POST.get("action")
     if action == "relink":
-        result = relink_supplier_orders()
-        messages.success(
-            request,
-            (
-                f"Linked {result['linked']} Inkthreadable order(s) to Shopify. "
-                f"{result['already']} already linked, {result['unmatched']} left unmatched "
-                f"(Wix, Etsy and website jobs stay unmatched — not guessed). "
-                f"Blanks refreshed from stored invoices "
-                f"(+{result.get('blanks_added', 0)} blanks, "
-                f"+{result.get('variants_added', 0)} size/colour rows). "
-                f"Then press Suggest product mappings so AT002 tees can be assigned."
-            ),
-        )
+        if start_job("relink", relink_supplier_orders):
+            messages.success(
+                request,
+                "Linking Inkthreadable orders and rebuilding blanks from stored invoices. "
+                "Leave this page open — it refreshes until that finishes. "
+                "Then press Suggest product mappings.",
+            )
+        else:
+            messages.error(request, "An update is already running. Wait for it to finish, then try again.")
         return redirect("web:integrations")
     if action == "suggest_mappings":
         result = apply_mapping_suggestions()

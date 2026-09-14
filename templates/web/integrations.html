@@ -63,11 +63,11 @@
     </form>
     <form method="post">{% csrf_token %}
       <input type="hidden" name="action" value="relink">
-      <button class="btn" type="submit">Link supplier orders</button>
+      <button class="btn" type="submit"{% if sync_running %} disabled{% endif %}>Link supplier orders</button>
     </form>
     <form method="post">{% csrf_token %}
       <input type="hidden" name="action" value="suggest_mappings">
-      <button class="btn" type="submit">Suggest product mappings</button>
+      <button class="btn" type="submit"{% if sync_running %} disabled{% endif %}>Suggest product mappings</button>
     </form>
     <form method="post">{% csrf_token %}
       <input type="hidden" name="action" value="suggest_reconciliation">
@@ -76,8 +76,8 @@
   </div>
   <p class="muted">
     <strong>Link supplier orders</strong> also rebuilds the Blanks list from invoices
-    already stored (that is how the AWDis 180 / AT002 tee appears). Then press
-    <strong>Suggest product mappings</strong>.
+    already stored (that is how the AWDis 180 / AT002 tee appears). Leave the page
+    open while it runs. Then press <strong>Suggest product mappings</strong>.
   </p>
 
   <h2>Data sources</h2>

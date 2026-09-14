@@ -281,6 +281,9 @@ class TestInkthreadableUpsert:
         blank = SupplierProduct.objects.get(supplier_id="AT002")
         assert blank.name == "The AWDis 180 T-shirt"
         assert SupplierVariant.objects.get(sku="AT002-DBL-L").current_cost == Decimal("13.44")
+        again = rebuild_blanks_from_stored_orders()
+        assert again["failed"] == 0
+        assert SupplierProduct.objects.filter(supplier_id="AT002").count() == 1
 
     def test_a_shopify_order_is_linked_by_external_id(self, make_product, make_order):
         product = make_product()

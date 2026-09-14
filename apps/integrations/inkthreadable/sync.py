@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import logging
 
+from django.db import IntegrityError, transaction
 from django.utils import timezone
 
 from apps.catalog.models import normalise_colour, normalise_size
@@ -169,12 +170,25 @@ def upsert_supplier_variant(item: dict, *, when) -> SupplierVariant | None:
         )
 
     if unit_cost is not None and when is not None:
-        SupplierVariantCost.objects.get_or_create(
-            supplier_variant=variant,
-            effective_from=when,
-            defaults={"unit_cost": unit_cost, "source": "api", "note": "From Inkthreadable order line"},
-        )
+        _ensure_variant_cost(variant, when=when, unit_cost=unit_cost)
     return variant
+
+
+def _ensure_variant_cost(variant: SupplierVariant, *, when, unit_cost) -> None:
+    """Record a cost for that day. Duplicate invoice dates are left as-is."""
+    try:
+        with transaction.atomic():
+            SupplierVariantCost.objects.get_or_create(
+                supplier_variant=variant,
+                effective_from=when,
+                defaults={
+                    "unit_cost": unit_cost,
+                    "source": "api",
+                    "note": "From Inkthreadable order line",
+                },
+            )
+    except IntegrityError:
+        return
 
 
 def _external_id_tokens(payload: dict) -> list[str]:
