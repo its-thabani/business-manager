@@ -289,6 +289,7 @@ class ExpenseAnalysis:
     uncategorised_value: Decimal = ZERO
     categories: list[dict] = field(default_factory=list)
     transactions: list = field(default_factory=list)
+    listed: list = field(default_factory=list)
 
 
 def expense_analysis(
@@ -299,10 +300,11 @@ def expense_analysis(
 ) -> ExpenseAnalysis:
     """Money that left the account and counts as a true expense.
 
-    Excluded and transfer rows are omitted. Customer refunds are listed
-    separately: they are money out, but they reduce sales rather than adding
-    to spend. Uncategorised minuses are shown so they can be labelled, and
-    are not added to the expense total.
+    Excluded and transfer rows are omitted. Customer refunds reduce sales
+    rather than adding to spend; they still appear in the outgoing list so a
+    row does not vanish when you override it to Sales Refund. Uncategorised
+    minuses are listed so they can be labelled, and are not added to the
+    expense total.
     """
     base = (queryset if queryset is not None else BankTransaction.objects.all()).in_range(date_range)
     reportable = base.reportable()
@@ -328,6 +330,11 @@ def expense_analysis(
     result.uncategorised_value = quantise(uncat_total) if uncat_total is not None else ZERO
     result.categories = category_breakdown(outgoings, expenses_only=True)
     result.transactions = list(outgoings)
+    result.listed = (
+        result.transactions
+        + list(refunds)
+        + list(uncategorised.select_related("category", "account"))
+    )
     return result
 
 

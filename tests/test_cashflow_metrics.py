@@ -199,6 +199,16 @@ class TestBreakdownsAndSeries:
         assert hidden.total == Decimal("265.00")
         assert all(txn.category.name != "Salary" for txn in hidden.transactions)
 
+    def test_expense_analysis_lists_refunds_without_adding_them_to_spend(self, seeded, make_txn):
+        hosting = Category.objects.get(name="Store Hosting")
+        refund = Category.objects.get(name="Sales Refund")
+        make_txn("-25.00", counterparty="Shopify", category=hosting, when=date(2026, 6, 7))
+        make_txn("-20.00", counterparty="Nadia", category=refund, when=date(2026, 6, 8))
+        analysis = expense_analysis(JUNE)
+        assert analysis.total == Decimal("25.00")
+        assert {txn.counterparty for txn in analysis.listed} == {"Shopify", "Nadia"}
+        assert {txn.counterparty for txn in analysis.transactions} == {"Shopify"}
+
     def test_monthly_series_returns_one_entry_per_month(self, books):
         series = monthly_series(DateRange(date(2026, 1, 1), date(2026, 12, 31)))
         assert len(series) == 12

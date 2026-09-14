@@ -105,9 +105,11 @@
     .pill.warn { background:#fef3c7; color:#92400e; }
     .pill.bad { background:#fee2e2; color:#991b1b; }
     form.inline { display:inline; }
-    .cat-form { display:flex; align-items:center; gap:.35rem; margin:0; }
+    .cat-form { display:flex; align-items:center; flex-wrap:wrap; gap:.35rem; margin:0; }
     .cat-form select { max-width:11.5rem; padding:.2rem .35rem; font-size:.85rem; }
     .cat-form .btn { padding:.15rem .45rem; font-size:.78rem; }
+    .cat-cell { display:flex; align-items:center; flex-wrap:wrap; gap:.45rem; }
+    .cat-cell .btn { padding:.15rem .45rem; font-size:.78rem; }
     button.linkish { background:none; border:0; padding:0; font:inherit; color:inherit; cursor:pointer; text-decoration:underline; }
     .charts { display:grid; grid-template-columns:1fr; gap:1rem; margin-top:1.25rem; }
     @media (min-width:800px) { .charts.two { grid-template-columns:1.4fr .8fr; } }

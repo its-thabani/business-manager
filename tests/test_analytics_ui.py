@@ -99,23 +99,57 @@ def test_expenses_page_lists_every_reportable_outgoing(client, make_txn, categor
     assert b"Wages" in shown.content
     assert b"Wages" not in hidden.content
     assert b"reduce sales" in shown.content
-    assert b'name="category"' in shown.content
-    assert b"Set" in shown.content
+    assert b"Override" in shown.content
+    assert b"Save override" not in shown.content
+    assert b'name="category"' not in shown.content
+    assert b"Customer" in shown.content
 
 
 def test_expenses_page_can_override_a_row_category(client, make_txn, category_by_name):
     txn = make_txn("-1.81", category=category_by_name("Expenditure"), counterparty="HMRC")
     tax = category_by_name("Tax")
 
+    editing = client.get(f"/expenses/?range=all&override={txn.pk}")
+    assert editing.status_code == 200
+    assert b"Save override" in editing.content
+    assert b'name="category"' in editing.content
+
     response = client.post(
         "/expenses/?range=all",
-        {"action": "set_category", "txn_id": str(txn.pk), "category": str(tax.pk)},
+        {"action": "override_category", "txn_id": str(txn.pk), "category": str(tax.pk)},
     )
 
     assert response.status_code == 302
     txn.refresh_from_db()
     assert txn.category_id == tax.pk
     assert txn.category_source == CategorySource.MANUAL
+    assert txn.is_category_locked is True
+
+    listed = client.get("/expenses/?range=all")
+    assert b"HMRC" in listed.content
+    assert b"overridden" in listed.content
+
+
+def test_overriding_to_a_refund_keeps_the_row_on_expenses(client, make_txn, category_by_name):
+    txn = make_txn(
+        "-20.00",
+        category=category_by_name("Expenditure"),
+        counterparty="Nadia st valle-salmon",
+    )
+    refund = category_by_name("Sales Refund")
+
+    response = client.post(
+        "/expenses/?range=all",
+        {"action": "override_category", "txn_id": str(txn.pk), "category": str(refund.pk)},
+        follow=True,
+    )
+
+    assert response.status_code == 200
+    assert b"Nadia st valle-salmon" in response.content
+    assert b"Sales Refund" in response.content
+    assert b"reduces sales" in response.content
+    txn.refresh_from_db()
+    assert txn.category_id == refund.pk
     assert txn.is_category_locked is True
 
 

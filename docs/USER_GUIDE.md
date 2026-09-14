@@ -119,7 +119,8 @@ Money paid to a personal account and then transferred in (for example a t-shirt 
 - **All true expenses** includes salary and tithe (they did leave the account).
 - **Hide salary & tithe** for operating spend only.
 - Sort the outgoing list by date, name, category or amount.
-- Change the category on any row (that choice is locked so Apply rules will not undo it).
+- **Override** a row’s category when a rule got it wrong. That lock is not undone by Apply rules.
+- Customer refunds stay in the outgoing list (they reduce sales; they are not added to true expenses).
 - Download every outgoing row.
 
 **What it can tell you**

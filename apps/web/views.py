@@ -209,17 +209,32 @@ def dashboard(request):
 
 def expenses(request):
     """True expenses for a period: every reportable outgoing, by category and row."""
-    if request.method == "POST" and request.POST.get("action") == "set_category":
+    if request.method == "POST" and request.POST.get("action") == "override_category":
         txn = get_object_or_404(BankTransaction, pk=request.POST.get("txn_id"))
         raw_category = (request.POST.get("category") or "").strip()
         if raw_category:
             category = get_object_or_404(Category, pk=raw_category, is_active=True)
             txn.set_manual_category(category)
-            messages.success(request, f"{txn.display_name} is now {category.name}.")
+            if category.kind == CategoryKind.REVENUE:
+                messages.success(
+                    request,
+                    (
+                        f"{txn.display_name} is now {category.name}. "
+                        "That reduces sales rather than counting as an expense — "
+                        "it stays on this list as a refund, and rules will not change it."
+                    ),
+                )
+            else:
+                messages.success(
+                    request,
+                    f"{txn.display_name} is now {category.name}. Rules will not change this row.",
+                )
         else:
             txn.set_manual_category(None)
             messages.success(request, f"{txn.display_name} has no category.")
-        query = request.GET.urlencode()
+        stay = request.GET.copy()
+        stay.pop("override", None)
+        query = stay.urlencode()
         return redirect(f"{request.path}?{query}" if query else request.path)
 
     include_drawings = _flag(request, "drawings", default=True)
@@ -231,7 +246,7 @@ def expenses(request):
     date_range, preset = requested_range(request.GET, earliest=earliest)
     analysis = expense_analysis(date_range, include_drawings=include_drawings)
 
-    transactions = list(analysis.transactions)
+    transactions = list(analysis.listed)
     if sort == "amount":
         transactions.sort(key=lambda row: row.amount)
     elif sort == "name":
@@ -244,6 +259,14 @@ def expenses(request):
     extras = []
     if not include_drawings:
         extras.append("drawings=0")
+
+    stay = request.GET.copy()
+    stay.pop("override", None)
+    stay_query = stay.urlencode()
+    try:
+        override_id = int(request.GET.get("override") or "")
+    except ValueError:
+        override_id = None
 
     if wants_csv(request):
         return csv_response(
@@ -272,6 +295,8 @@ def expenses(request):
             "include_drawings": include_drawings,
             "extra_query": "&".join(extras),
             "sort": sort,
+            "stay_query": stay_query,
+            "override_id": override_id,
             "analysis": analysis,
             "transactions": transactions,
             "category_choices": Category.objects.filter(is_active=True)

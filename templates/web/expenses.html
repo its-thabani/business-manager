@@ -17,7 +17,9 @@
   <p class="muted">
     Every amount that left the account and counts as a cost. Transfers and anything
     marked excluded are not here — they are outside the books.
-    Change a row’s category here to override a rule (that choice is locked).
+    Category is set by rules. Use <strong>Override</strong> on a row to lock a
+    different category; later rule runs will not change it.
+    Customer refunds stay on the list but are not added to true expenses.
   </p>
 
   <div class="cards">
@@ -110,19 +112,29 @@
           <td>{{ txn.occurred_on|date:"j M Y" }}</td>
           <td>{{ txn.counterparty|default:txn.description|default:"—" }}</td>
           <td>
-            <form class="cat-form" method="post" action="?{{ range_query }}{% if extra_query %}&amp;{{ extra_query }}{% endif %}{% if sort != 'date' %}&amp;sort={{ sort }}{% endif %}">
-              {% csrf_token %}
-              <input type="hidden" name="action" value="set_category">
-              <input type="hidden" name="txn_id" value="{{ txn.pk }}">
-              <label class="sr-only" for="cat-{{ txn.pk }}">Category</label>
-              <select id="cat-{{ txn.pk }}" name="category">
-                <option value=""{% if not txn.category_id %} selected{% endif %}>Uncategorised</option>
-                {% for category in category_choices %}
-                  <option value="{{ category.pk }}"{% if txn.category_id == category.pk %} selected{% endif %}>{{ category.name }}</option>
-                {% endfor %}
-              </select>
-              <button class="btn" type="submit">Set</button>
-            </form>
+            {% if override_id == txn.pk %}
+              <form class="cat-form" method="post" action="?{{ stay_query }}">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="override_category">
+                <input type="hidden" name="txn_id" value="{{ txn.pk }}">
+                <label class="sr-only" for="cat-{{ txn.pk }}">Override category</label>
+                <select id="cat-{{ txn.pk }}" name="category">
+                  <option value=""{% if not txn.category_id %} selected{% endif %}>Uncategorised</option>
+                  {% for category in category_choices %}
+                    <option value="{{ category.pk }}"{% if txn.category_id == category.pk %} selected{% endif %}>{{ category.name }}</option>
+                  {% endfor %}
+                </select>
+                <button class="btn btn-primary" type="submit">Save override</button>
+                <a class="btn" href="?{{ stay_query }}">Cancel</a>
+              </form>
+            {% else %}
+              <div class="cat-cell">
+                <span>{% if txn.category %}{{ txn.category.name }}{% else %}Uncategorised{% endif %}</span>
+                {% if txn.category_source == "MANUAL" %}<span class="muted">overridden</span>{% endif %}
+                {% if txn.category.kind == "REVENUE" %}<span class="muted">refund</span>{% endif %}
+                <a class="btn" href="?{% if stay_query %}{{ stay_query }}&amp;{% endif %}override={{ txn.pk }}">Override</a>
+              </div>
+            {% endif %}
           </td>
           <td class="num neg">{{ txn.amount|floatformat:2 }}</td>
         </tr>
