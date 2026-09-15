@@ -323,6 +323,36 @@ def test_products_page_shows_refunded_profit_instead_of_a_blank(
     assert b"Returned Hoodie" in detail.content
 
 
+def test_order_page_shows_printer_vat_and_invoice_total(client, make_product, make_order):
+    product = make_product(variants=[("Dusty Pink", "L", "34.99")])
+    order = make_order(
+        lines=[(product.variants.get(), 1, "34.99")],
+        shipping_charged="4.99",
+        payment_fee="0.98",
+        name="#1440",
+    )
+    SupplierOrder.objects.create(
+        supplier_reference="2136792",
+        order=order,
+        product_cost=Decimal("16.83"),
+        shipping_cost=Decimal("3.15"),
+        tax=Decimal("3.99"),
+        total_cost=Decimal("23.97"),
+    )
+
+    page = client.get(f"/orders/{order.pk}/")
+
+    assert page.status_code == 200
+    html = page.content.decode()
+    assert "16.83" in html
+    assert "3.15" in html
+    assert "3.99" in html
+    assert "23.97" in html
+    assert "included in contribution" in html
+    assert "24.95" in html
+    assert "Paid to Inkthreadable" in html
+
+
 def test_orders_page_hides_zero_pound_downloads_by_default(client, make_product, make_order):
     product = make_product(variants=[("Black", "L", "34.99")])
     paid = make_order(lines=[(product.variants.get(), 1, "34.99")])

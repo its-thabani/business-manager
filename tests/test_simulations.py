@@ -55,7 +55,7 @@ def test_missing_cost_stays_unknown_unless_the_scenario_supplies_one(make_produc
 
     filled = simulate(profits, SimulationSpec(new_unit_cost=Decimal("7.00")), date_range=_range())
     assert filled.projected.is_complete is True
-    assert filled.projected.profit == Decimal("13.00")
+    assert filled.projected.profit == Decimal("11.60")
     assert any("assumption" in note.lower() for note in filled.notes)
 
 
@@ -113,6 +113,7 @@ def test_simulate_page_renders(client, make_product, map_variant, make_order):
     assert b"Assumptions" in response.content
     assert b"only the boxes" in response.content
     assert b"Classic Tee" in response.content
+    assert b"Printer VAT" in response.content
 
 
 def test_line_chart_places_a_higher_point_higher_on_the_page():

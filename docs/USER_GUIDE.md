@@ -156,7 +156,7 @@ Confirmed links are **not** overwritten the next time suggestions run.
 
 **How the numbers work**
 
-- **Expected after fees** = Shopify net sales (after discounts and refunds, excluding VAT) minus **card processing** (Stripe / Shopify Payments). It is **not** the Shopify monthly subscription (that is Store Hosting on Expenses).
+- **Expected after fees** = Shopify net sales (after discounts and refunds; checkout tax is kept in sales) minus **card processing** (Stripe / Shopify Payments). It is **not** the Shopify monthly subscription (that is Store Hosting on Expenses).
 - **Cash gap** = expected cash minus Stripe/Adyen that actually landed in the dates you picked. A positive gap means sales are waiting to be paid out (usually a few days). It is not a missing expense.
 - Unmatched rows stay unmatched until amount and date line up. There is no button to force a match. Leave them; a later payout often takes a sales day.
 - Money **in** from Inkthreadable is a printer credit. Categorise it as **Supplier refund** on Expenses (reduces printer cost). It is not a sale, and it is not listed as an unmatched charge.
@@ -282,7 +282,7 @@ A **green or red** profit with a complete pill is the real total — every sold 
 
 A **red / negative** profit is usually a refund or exchange: the customer was paid back, but the print was already done so the cost stays. A **—** with **add cost** means there is still no printer cost for that product. Click it and map the blank. Do not read a group approximation as that line’s profit.
 
-Profit uses **net** printer prices (what Inkthreadable charged before VAT) and **excludes** VAT the customer paid at checkout. Your own pricing (garment + shipping + tax, single vs double sided) will therefore look more expensive than the app’s cost. Double-sided and neck-label extras are included only when that job’s invoice (or mapped SKU) includes them.
+Profit uses **VAT-inclusive** printer prices (what Inkthreadable charged, including VAT, because it is not claimed back) and **keeps** VAT the customer paid at checkout in sales. Double-sided and neck-label extras are included only when that job’s invoice (or mapped SKU) includes them. If a linked invoice has no VAT line, 20% is estimated on net print plus postage.
 
 To replace an approximation with a real total: map the variant on **Mapping**, run **Link supplier orders** on Data health, or enter **Cost per item** on the Shopify variant.
 
@@ -366,9 +366,9 @@ Guests with no email stay **unidentified** and are left out of rates rather than
 **Click an order** for the full breakdown:
 
 - Product revenue, postage charged, discounts, refunds, tax.
-- Inkthreadable product cost and postage (or **—**).
+- Inkthreadable product and postage **net of VAT**, the VAT on the printer invoice (included in contribution), and the amount paid to Inkthreadable.
 - Card fees (actual or estimated — it says which).
-- Contribution profit.
+- Contribution profit (print + postage + printer VAT + fees).
 - Line items and any refunds.
 
 **What it can tell you**
@@ -465,6 +465,7 @@ Leave every box blank except the one change you care about.
 
 - A yellow list of every assumption used.
 - Revenue now vs if; profit now vs if (profit stays **—** if costs are incomplete).
+- **Printer product** is net print cost (no postage). Contribution still includes printer postage and printer VAT (not claimed back). It comes from linked Inkthreadable jobs when they exist, otherwise the mapped blank’s price list.
 - A comparison chart.
 - Break-even volume when you change shipping.
 
@@ -588,7 +589,7 @@ The hosted copy already has history. If you ever stand up a blank database:
 | **actual** | Taken from Inkthreadable or the payment provider. |
 | **from price list** | Catalogue cost on the order date. |
 | **from Shopify** | Cost per item entered in Shopify. Used only when there is no supplier cost. |
-| **estimated** | A stated assumption (usually card fees). |
+| **estimated** | A stated assumption (card fees, or 20% printer VAT when the invoice has no tax line). |
 | Yellow note | Something needs a person. |
 
 ---

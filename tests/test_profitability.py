@@ -68,10 +68,43 @@ def test_a_simple_order_breaks_down_into_revenue_costs_and_profit(
     # Fee is estimated at 1.5% of £28.94 plus 20p.
     assert profit.payment_fee == Decimal("0.63")
     assert profit.payment_fee_basis == Basis.ESTIMATED
-    assert profit.total_costs == Decimal("11.68")
-    assert profit.contribution_profit == Decimal("17.26")
-    assert profit.margin_pct == Decimal("59.64")
+    assert profit.supplier_tax == Decimal("2.21")
+    assert profit.supplier_tax_basis == Basis.ESTIMATED
+    assert profit.total_costs == Decimal("13.89")
+    assert profit.contribution_profit == Decimal("15.05")
+    assert profit.margin_pct == Decimal("52.00")
     assert profit.is_complete
+    assert profit.supplier_invoice_total == Decimal("13.26")
+
+
+def test_printer_vat_is_included_in_contribution(make_product, make_order):
+    """Laura's invoice VAT is a real cost: the business does not reclaim it."""
+    product = make_product(variants=[("Dusty Pink", "L", "34.99")])
+    order = make_order(
+        lines=[(product.variants.get(), 1, "34.99")],
+        shipping_charged="4.99",
+        discounts="3.49",
+        payment_fee="0.98",
+    )
+    SupplierOrder.objects.create(
+        supplier_reference="2136792",
+        order=order,
+        product_cost=Decimal("16.83"),
+        shipping_cost=Decimal("3.15"),
+        tax=Decimal("3.99"),
+        total_cost=Decimal("23.97"),
+    )
+
+    profit = compute_order_profit(order)
+
+    assert profit.supplier_product_cost == Decimal("16.83")
+    assert profit.supplier_shipping_cost == Decimal("3.15")
+    assert profit.supplier_tax == Decimal("3.99")
+    assert profit.supplier_invoice_total == Decimal("23.97")
+    assert profit.payment_fee == Decimal("0.98")
+    assert profit.supplier_tax_basis == Basis.ACTUAL
+    assert profit.total_costs == Decimal("24.95")
+    assert profit.contribution_profit == Decimal("11.54")
 
 
 def test_split_fulfilments_are_summed_not_first_only(make_product, make_order):
@@ -421,9 +454,12 @@ def test_postage_is_shared_between_lines_in_proportion_to_revenue(
     profit = compute_order_profit(order)
     by_variant = {lp.line.variant_id: lp for lp in profit.lines}
 
-    # £30 of £40 is 75% of the revenue, so it carries 75% of the £4 postage.
+    # £30 of £40 is 75% of the revenue, so it carries 75% of the £4 postage
+    # and of the £3.40 printer VAT (20% of £17 net).
     assert by_variant[expensive.pk].allocated_shipping_cost == Decimal("3.00")
     assert by_variant[cheap.pk].allocated_shipping_cost == Decimal("1.00")
+    assert by_variant[expensive.pk].allocated_tax == Decimal("2.55")
+    assert by_variant[cheap.pk].allocated_tax == Decimal("0.85")
 
 
 def test_costs_are_shared_by_quantity_when_an_order_is_entirely_discounted(
@@ -473,29 +509,32 @@ def test_postage_is_not_applicable_when_nothing_needs_shipping(
 # ---------------------------------------------------------------------------
 
 
-def test_tax_is_excluded_from_revenue_by_default(make_product, map_variant, make_order):
-    product = make_product(variants=[("Black", "L", "20.00")])
-    variant = product.variants.get()
-    map_variant(variant, cost="8.00")
-    order = make_order(lines=[(variant, 1, "20.00")], tax="4.00", shipping_charged="0.00")
-
-    assert compute_order_profit(order).net_sales == Decimal("16.00")
-
-
-def test_tax_can_be_counted_as_revenue_when_not_vat_registered(
-    settings, make_product, map_variant, make_order
+def test_checkout_tax_stays_in_sales_because_the_business_is_not_vat_registered(
+    make_product, map_variant, make_order
 ):
-    settings.PROFIT_ASSUMPTIONS = {
-        "payment_fee_percent": Decimal("1.5"),
-        "payment_fee_fixed": Decimal("0.20"),
-        "tax_treatment": "include",
-    }
     product = make_product(variants=[("Black", "L", "20.00")])
     variant = product.variants.get()
     map_variant(variant, cost="8.00")
     order = make_order(lines=[(variant, 1, "20.00")], tax="4.00", shipping_charged="0.00")
 
     assert compute_order_profit(order).net_sales == Decimal("20.00")
+
+
+def test_checkout_tax_can_be_held_for_hmrc_if_the_business_registers(
+    settings, make_product, map_variant, make_order
+):
+    settings.PROFIT_ASSUMPTIONS = {
+        "payment_fee_percent": Decimal("1.5"),
+        "payment_fee_fixed": Decimal("0.20"),
+        "tax_treatment": "exclude",
+        "supplier_vat_rate": Decimal("20"),
+    }
+    product = make_product(variants=[("Black", "L", "20.00")])
+    variant = product.variants.get()
+    map_variant(variant, cost="8.00")
+    order = make_order(lines=[(variant, 1, "20.00")], tax="4.00", shipping_charged="0.00")
+
+    assert compute_order_profit(order).net_sales == Decimal("16.00")
 
 
 # ---------------------------------------------------------------------------

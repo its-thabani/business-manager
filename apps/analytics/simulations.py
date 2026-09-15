@@ -13,7 +13,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from decimal import Decimal
 
-from apps.analytics.profitability import LineProfit, OrderProfit, Performance
+from apps.analytics.profitability import LineProfit, OrderProfit, Performance, _vat_on_net
 from apps.core.money import ZERO, quantise, safe_divide
 from apps.core.periods import DateRange
 
@@ -197,6 +197,15 @@ def _roll_up(
             else:
                 fee = _scale(line.allocated_payment_fee, volume)
 
+            old_net = (line.product_cost or ZERO) + line.allocated_shipping_cost
+            new_net = (product_cost or ZERO) + shipping_cost
+            if product_cost is None:
+                tax = ZERO
+            elif old_net > 0 and line.allocated_tax:
+                tax = quantise(new_net * (line.allocated_tax / old_net))
+            else:
+                tax = _vat_on_net(new_net)
+
             out.units += int(units.to_integral_value())
             out.lines_total += 1
             out.gross_revenue = quantise(out.gross_revenue + gross)
@@ -206,6 +215,7 @@ def _roll_up(
             out.refunded_units += line.refunded_quantity * volume
             out.shipping_cost = quantise(out.shipping_cost + shipping_cost)
             out.payment_fees = quantise(out.payment_fees + fee)
+            out.supplier_tax = quantise(out.supplier_tax + tax)
             if product_cost is not None:
                 out.supplier_cost = quantise(out.supplier_cost + product_cost)
             order_ids.add(line.line.order_id)

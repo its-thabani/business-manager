@@ -178,9 +178,10 @@ PROFIT_ASSUMPTIONS = {
     # does not report the actual fee. Stripe's UK standard rate.
     "payment_fee_percent": Decimal(env("PAYMENT_FEE_PERCENT", default="1.5")),
     "payment_fee_fixed": Decimal(env("PAYMENT_FEE_FIXED", default="0.20")),
-    # "exclude" treats tax as money held for HMRC rather than income. Switch to
-    # "include" if the business is not VAT registered and gross figures are wanted.
-    "tax_treatment": env("TAX_TREATMENT", default="exclude"),
+    # Checkout tax stays in sales: the business is not VAT registered.
+    # Printer VAT is a contribution cost (see supplier_vat_rate).
+    "tax_treatment": env("TAX_TREATMENT", default="include"),
+    "supplier_vat_rate": Decimal(env("SUPPLIER_VAT_RATE", default="20")),
 }
 
 # --------------------------------------------------------------------------

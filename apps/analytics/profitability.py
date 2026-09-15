@@ -22,12 +22,18 @@ full quantity ordered, not the quantity kept, which makes a refund cost the
 business the sale *and* the item. Reported margins are lower than a naive
 calculation and that is the point.
 
-**Order-level costs are allocated pro-rata by line revenue.** Postage and card
-fees are charged per order, not per item, so attributing them to a variant
-requires a choice. Revenue-weighting means a £40 hoodie carries more of the
-postage than a £5 sticker in the same parcel, which is what makes "orders with
-several items are more profitable per item" a measurable effect rather than an
-assertion.
+**Order-level costs are allocated pro-rata by line revenue.** Postage, printer
+VAT and card fees are charged per order, not per item, so attributing them to a
+variant requires a choice. Revenue-weighting means a £40 hoodie carries more of
+the postage than a £5 sticker in the same parcel, which is what makes "orders
+with several items are more profitable per item" a measurable effect rather than
+an assertion.
+
+**Printer VAT is a cost.** The business is below the VAT threshold and does not
+reclaim input tax, so the VAT on an Inkthreadable invoice is money that left
+the account. Linked invoices use the tax line they stored; when that is missing,
+contribution adds the stated VAT rate on net print plus postage and labels it
+estimated.
 """
 
 from __future__ import annotations
@@ -88,7 +94,8 @@ def _assumptions() -> dict:
     defaults = {
         "payment_fee_percent": Decimal("1.5"),
         "payment_fee_fixed": Decimal("0.20"),
-        "tax_treatment": "exclude",
+        "tax_treatment": "include",
+        "supplier_vat_rate": Decimal("20"),
     }
     defaults.update(getattr(settings, "PROFIT_ASSUMPTIONS", {}) or {})
     return defaults
@@ -183,13 +190,19 @@ class LineProfit:
 
     allocated_shipping_cost: Decimal
     allocated_payment_fee: Decimal
+    allocated_tax: Decimal
     revenue_share: Decimal
 
     @property
     def total_cost(self) -> Decimal | None:
         if self.product_cost is None:
             return None
-        return quantise(self.product_cost + self.allocated_shipping_cost + self.allocated_payment_fee)
+        return quantise(
+            self.product_cost
+            + self.allocated_shipping_cost
+            + self.allocated_payment_fee
+            + self.allocated_tax
+        )
 
     @property
     def contribution_profit(self) -> Decimal | None:
@@ -235,13 +248,16 @@ class OrderProfit:
     discounts: Decimal = ZERO
     refunds: Decimal = ZERO
     tax: Decimal = ZERO
-    tax_treatment: str = "exclude"
+    tax_treatment: str = "include"
 
     # --- Costs ---
     supplier_product_cost: Decimal | None = None
     supplier_product_cost_basis: str = Basis.MISSING
     supplier_shipping_cost: Decimal | None = None
     supplier_shipping_cost_basis: str = Basis.MISSING
+    supplier_tax: Decimal | None = None
+    supplier_tax_basis: str = Basis.MISSING
+    supplier_invoice_total: Decimal | None = None
     payment_fee: Decimal | None = None
     payment_fee_basis: str = Basis.MISSING
 
@@ -255,9 +271,9 @@ class OrderProfit:
     def net_sales(self) -> Decimal:
         """What the sale was worth, after discounts and refunds.
 
-        Tax is excluded by default: VAT collected on behalf of HMRC is not income.
-        Set ``PROFIT_ASSUMPTIONS['tax_treatment'] = 'include'`` if the business is
-        not VAT registered and you would rather see gross figures.
+        Checkout tax stays in sales by default: the business is not VAT
+        registered, so it is not holding that money for HMRC.
+        Set ``PROFIT_ASSUMPTIONS['tax_treatment'] = 'exclude'`` if that changes.
         """
         total = self.product_revenue + self.shipping_charged - self.discounts - self.refunds
         if self.tax_treatment == "exclude":
@@ -273,7 +289,16 @@ class OrderProfit:
 
     @property
     def known_costs(self) -> list[Decimal]:
-        return [c for c in (self.supplier_product_cost, self.supplier_shipping_cost, self.payment_fee) if c is not None]
+        return [
+            c
+            for c in (
+                self.supplier_product_cost,
+                self.supplier_shipping_cost,
+                self.supplier_tax,
+                self.payment_fee,
+            )
+            if c is not None
+        ]
 
     @property
     def total_costs(self) -> Decimal:
@@ -323,6 +348,7 @@ class OrderProfit:
             for basis in (
                 self.supplier_product_cost_basis,
                 self.supplier_shipping_cost_basis,
+                self.supplier_tax_basis,
                 self.payment_fee_basis,
             )
         )
@@ -343,6 +369,7 @@ class OrderProfit:
             "net_sales": self.net_sales,
             "supplier_product_cost": self.supplier_product_cost,
             "supplier_shipping_cost": self.supplier_shipping_cost,
+            "supplier_tax": self.supplier_tax,
             "payment_fee": self.payment_fee,
             "total_costs": self.total_costs,
             "contribution_profit": self.contribution_profit,
@@ -423,6 +450,9 @@ def compute_order_profit(
     linked = list(order.supplier_orders.all())
     product_charges = [so.product_cost for so in linked if so.product_cost is not None]
     shipping_charges = [so.shipping_cost for so in linked if so.shipping_cost is not None]
+    invoice_totals = [so.total_cost for so in linked if so.total_cost is not None]
+    if invoice_totals:
+        result.supplier_invoice_total = quantise(sum(invoice_totals, ZERO))
     if product_charges:
         # What Inkthreadable actually charged beats any price list. Split
         # fulfilments (two Inkthreadable jobs for one Shopify order) are summed.
@@ -464,6 +494,8 @@ def compute_order_profit(
             "Inkthreadable order to include postage in the profit figure."
         )
 
+    _apply_supplier_tax(result, linked, assumptions)
+
     # --- Payment fee ------------------------------------------------------
     if order.payment_fee is not None:
         result.payment_fee = quantise(order.payment_fee)
@@ -479,6 +511,45 @@ def compute_order_profit(
 
     result.lines = _build_line_profits(order, lines, line_costs, line_bases, result)
     return result
+
+
+def _vat_on_net(net: Decimal, assumptions: dict | None = None) -> Decimal:
+    """VAT on net printer product + postage. Zero when there is nothing to tax."""
+    rate = Decimal((assumptions or _assumptions())["supplier_vat_rate"])
+    if net <= 0 or rate <= 0:
+        return ZERO
+    return quantise(net * rate / Decimal("100"))
+
+
+def _apply_supplier_tax(result: OrderProfit, linked: list, assumptions: dict) -> None:
+    """Printer VAT is a contribution cost: the business does not reclaim it.
+
+    Prefer the tax line on linked invoices, then the gap between invoice total
+    and net charges, then the stated VAT rate on net print plus postage.
+    """
+    tax_charges = [so.tax for so in linked if so.tax is not None]
+    if tax_charges:
+        result.supplier_tax = quantise(sum(tax_charges, ZERO))
+        result.supplier_tax_basis = Basis.ACTUAL
+    elif result.supplier_invoice_total is not None and result.supplier_product_cost is not None:
+        implied = result.supplier_invoice_total - result.supplier_product_cost - (
+            result.supplier_shipping_cost or ZERO
+        )
+        if implied > 0:
+            result.supplier_tax = quantise(implied)
+            result.supplier_tax_basis = Basis.ACTUAL
+    if result.supplier_tax is None and result.supplier_product_cost is not None:
+        net = result.supplier_product_cost + (result.supplier_shipping_cost or ZERO)
+        result.supplier_tax = _vat_on_net(net, assumptions)
+        result.supplier_tax_basis = (
+            Basis.NOT_APPLICABLE if result.supplier_tax == ZERO else Basis.ESTIMATED
+        )
+    if result.supplier_invoice_total is None and result.supplier_tax is not None:
+        result.supplier_invoice_total = quantise(
+            (result.supplier_product_cost or ZERO)
+            + (result.supplier_shipping_cost or ZERO)
+            + result.supplier_tax
+        )
 
 
 def _rescale_line_costs(
@@ -531,6 +602,7 @@ def _build_line_profits(
 
     shipping_to_share = result.supplier_shipping_cost or ZERO
     fee_to_share = result.payment_fee or ZERO
+    tax_to_share = result.supplier_tax or ZERO
 
     out = []
     for line in lines:
@@ -562,6 +634,7 @@ def _build_line_profits(
                 product_cost=line_costs[line.pk],
                 allocated_shipping_cost=quantise(shipping_to_share * share),
                 allocated_payment_fee=quantise(fee_to_share * share),
+                allocated_tax=quantise(tax_to_share * share),
                 revenue_share=quantise(share * 100),
             )
         )
@@ -618,6 +691,7 @@ class Performance:
 
     supplier_cost: Decimal = ZERO
     shipping_cost: Decimal = ZERO
+    supplier_tax: Decimal = ZERO
     payment_fees: Decimal = ZERO
 
     lines_total: int = 0
@@ -630,7 +704,9 @@ class Performance:
 
     @property
     def total_cost(self) -> Decimal:
-        return quantise(self.supplier_cost + self.shipping_cost + self.payment_fees)
+        return quantise(
+            self.supplier_cost + self.shipping_cost + self.supplier_tax + self.payment_fees
+        )
 
     @property
     def sales_for_margin(self) -> Decimal:
@@ -758,6 +834,7 @@ class Performance:
             "net_revenue": self.net_revenue,
             "supplier_cost": self.supplier_cost,
             "shipping_cost": self.shipping_cost,
+            "supplier_tax": self.supplier_tax,
             "payment_fees": self.payment_fees,
             "total_cost": self.total_cost,
             "profit": self.profit,
@@ -791,6 +868,7 @@ def _accumulate(performance: Performance, line_profit: LineProfit, order_ids: se
         performance.shipping_cost + line_profit.allocated_shipping_cost
     )
     performance.payment_fees = quantise(performance.payment_fees + line_profit.allocated_payment_fee)
+    performance.supplier_tax = quantise(performance.supplier_tax + line_profit.allocated_tax)
     if line_profit.product_cost is None:
         performance.lines_missing_cost += 1
     else:

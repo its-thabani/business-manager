@@ -516,7 +516,7 @@ def reconcile(date_range: DateRange) -> ReconciliationReport:
 
     shop = summarise(period_profits, label="Shop", date_range=date_range)
     if shop.lines_total:
-        known = shop.supplier_cost + shop.shipping_cost
+        known = shop.supplier_cost + shop.shipping_cost + shop.supplier_tax
         report.estimated_fulfilment = quantise(known) if shop.is_complete else None
         report.fulfilment_coverage_pct = shop.completeness_pct
 

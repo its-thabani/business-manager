@@ -12,6 +12,8 @@
     This does not change real books. It replays the orders already in the dates
     you picked. Fill <strong>only the boxes for the change you want</strong>;
     leave the rest blank, then press Run scenario.
+    <strong>Printer product</strong> is the net print cost (no postage).
+    Contribution still includes printer postage, printer VAT, and card fees.
   </p>
 
   <form method="get" class="card" style="margin-top:1rem">
@@ -175,9 +177,14 @@
         <td class="num">£{{ result.projected.net_revenue|floatformat:2 }}</td>
       </tr>
       <tr>
-        <td>Supplier cost</td>
+        <td>Printer product <span class="muted">(net of VAT, no postage)</span></td>
         <td class="num">{% if result.baseline.is_complete or result.baseline.supplier_cost %}£{{ result.baseline.supplier_cost|floatformat:2 }}{% else %}—{% endif %}</td>
         <td class="num">{% if result.projected.is_complete or result.projected.lines_missing_cost == 0 %}£{{ result.projected.supplier_cost|floatformat:2 }}{% else %}—{% endif %}</td>
+      </tr>
+      <tr>
+        <td>Printer VAT</td>
+        <td class="num">£{{ result.baseline.supplier_tax|floatformat:2 }}</td>
+        <td class="num">£{{ result.projected.supplier_tax|floatformat:2 }}</td>
       </tr>
       <tr>
         <td>Margin</td>

@@ -1,9 +1,9 @@
 <div class="card{% if performance.is_estimate %} approx-card{% endif %}">
   <div class="label">
     {% if performance.is_estimate %}
-      <span class="tip" title="Not the books. Net sales minus printer cost, printer postage and card fees — but only some sold items have a cost, so this applies their margin to the rest.">Approx. contribution profit</span>
+      <span class="tip" title="Not the books. Net sales minus printer cost, printer postage, printer VAT and card fees — but only some sold items have a cost, so this applies their margin to the rest.">Approx. contribution profit</span>
     {% else %}
-      <span class="tip" title="Net sales minus printer cost, printer postage and card fees. Not after software or salary.">Contribution profit</span>
+      <span class="tip" title="Net sales minus printer cost, printer postage, printer VAT and card fees. VAT is included because it is not claimed back. Not after software or salary.">Contribution profit</span>
     {% endif %}
   </div>
   {% if performance.is_complete %}

@@ -14,26 +14,38 @@
     <tr><td>+ Shipping charged</td><td class="num">£{{ profit.shipping_charged }}</td></tr>
     <tr><td>− Discounts</td><td class="num">£{{ profit.discounts }}</td></tr>
     <tr><td>− Refunds</td><td class="num">£{{ profit.refunds }}</td></tr>
-    <tr><td>− Tax ({{ profit.tax_treatment }})</td><td class="num">£{{ profit.tax }}</td></tr>
+    {% if profit.tax_treatment == "exclude" %}
+      <tr><td>− Tax (held for HMRC)</td><td class="num">£{{ profit.tax }}</td></tr>
+    {% else %}
+      <tr><td>Checkout tax <span class="muted">(kept in sales)</span></td><td class="num">£{{ profit.tax }}</td></tr>
+    {% endif %}
     <tr class="total"><td>Net sales</td><td class="num">£{{ profit.net_sales }}</td></tr>
   </table>
 
   <h2>Costs</h2>
   <table class="breakdown">
     <tr>
-      <td>− Inkthreadable product cost</td>
+      <td>− Inkthreadable product <span class="muted">(net of VAT)</span></td>
       <td class="num">{% if profit.supplier_product_cost is not None %}{{ profit.supplier_product_cost }}{% else %}—{% endif %}</td>
     </tr>
     <tr>
-      <td>− Inkthreadable shipping</td>
+      <td>− Inkthreadable shipping <span class="muted">(net of VAT)</span></td>
       <td class="num">{% if profit.supplier_shipping_cost is not None %}{{ profit.supplier_shipping_cost }}{% else %}—{% endif %}</td>
+    </tr>
+    <tr>
+      <td>− Inkthreadable VAT <span class="muted">({{ profit.supplier_tax_basis }}, included in contribution)</span></td>
+      <td class="num">{% if profit.supplier_tax is not None %}{{ profit.supplier_tax }}{% else %}—{% endif %}</td>
+    </tr>
+    <tr>
+      <td>Paid to Inkthreadable</td>
+      <td class="num">{% if profit.supplier_invoice_total is not None %}{{ profit.supplier_invoice_total }}{% else %}—{% endif %}</td>
     </tr>
     <tr>
       <td>− Payment fees <span class="muted">({{ profit.payment_fee_basis }})</span></td>
       <td class="num">{% if profit.payment_fee is not None %}{{ profit.payment_fee }}{% else %}—{% endif %}</td>
     </tr>
     <tr class="total">
-      <td>Known costs</td>
+      <td>Costs used for profit <span class="muted">(product + shipping + VAT + fees)</span></td>
       <td class="num">{{ profit.total_costs }}</td>
     </tr>
     <tr class="total">
@@ -47,6 +59,13 @@
       <td class="num">{% if profit.margin_pct is not None %}{{ profit.margin_pct }}%{% else %}—{% endif %}</td>
     </tr>
   </table>
+  {% if profit.supplier_tax %}
+    <p class="muted">
+      Printer VAT is a cost: the business is not VAT-registered, so it is not
+      claimed back. Linked invoices use the tax actually charged; otherwise
+      20% is estimated on net print plus postage.
+    </p>
+  {% endif %}
 
   {% if profit.warnings %}
     <div class="note">

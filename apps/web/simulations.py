@@ -40,7 +40,7 @@ def simulate_view(request):
                 "then": result.projected.profit if result.projected.is_complete else 0,
             },
             {
-                "label": "Supplier cost",
+                "label": "Printer product",
                 "now": result.baseline.supplier_cost,
                 "then": result.projected.supplier_cost,
             },

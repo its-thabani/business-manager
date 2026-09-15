@@ -48,11 +48,10 @@ Do not invent a Shopify order for it.
 
 ### Printer VAT and “checkout” cost (Laura, 15 Sep 2026)
 
-She prices a garment as print + shipping + VAT (and +£4.20 before tax for a
-second print). The app uses Inkthreadable **net** print + postage, and
-**excludes** VAT the customer paid. Linked invoices store tax but contribution
-profit does not add it. Next slice: optionally cost from `total` (VAT-inclusive)
-on linked jobs, and a double-sided / neck-label SKU on mapping.
+Done: contribution includes Inkthreadable VAT (actual invoice tax, or 20% on
+net print + postage when the tax line is missing). Checkout tax stays in
+sales. Still open: a double-sided / neck-label SKU on mapping, and a
+checkout-style cost that adds a second print before tax.
 
 ### Exchanges, sale reprints, already-printed stock
 
@@ -131,8 +130,8 @@ replace it until the API path is as careful about existing categories.
 
 ## How to pick the next slice
 
-1. Unlock-profit queue, then printer-VAT / double-sided cost if margins still
-   feel “too good”.
+1. Unlock-profit queue, then double-sided / neck-label cost if margins still
+   feel off versus a second print.
 2. Exchanges / already-printed stock if sale listings keep distorting profit.
 3. Tax-year pack or a monthly digest when an accountant or a forgotten tab
    is the pain.
