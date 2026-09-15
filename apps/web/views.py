@@ -555,7 +555,7 @@ def products(request):
     """Which products sold, and whether they actually made money."""
     date_range, preset = _requested_range(request)
     sort = request.GET.get("sort", "units")
-    if sort not in {"name", "units", "orders", "revenue", "share", "profit", "margin"}:
+    if sort not in {"name", "units", "orders", "refunds", "revenue", "share", "profit", "margin"}:
         sort = "units"
     hide_free = _flag(request, "hide_free", default=True)
     hide_zero = _flag(request, "hide_zero", default=True)
@@ -624,6 +624,7 @@ def products(request):
                 "Product",
                 "Orders",
                 "Units",
+                "Refunds",
                 "Net sales",
                 "Share of sales %",
                 "Profit",
@@ -636,6 +637,7 @@ def products(request):
                     row.label,
                     row.orders,
                     row.units,
+                    row.refunded_units,
                     money_cell(row.net_revenue),
                     row.revenue_share_pct,
                     money_cell(row.profit) if row.is_complete else "",

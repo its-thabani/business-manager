@@ -119,6 +119,7 @@
         <th><a class="{% if sort == 'name' %}on{% endif %}" href="?{{ range_query }}&amp;sort=name{% if not hide_free %}&amp;hide_free=0{% endif %}{% if not hide_zero %}&amp;hide_zero=0{% endif %}{% if not hide_inactive %}&amp;hide_inactive=0{% endif %}">Product</a></th>
         <th class="num"><a class="{% if sort == 'orders' %}on{% endif %}" href="?{{ range_query }}&amp;sort=orders{% if not hide_free %}&amp;hide_free=0{% endif %}{% if not hide_zero %}&amp;hide_zero=0{% endif %}{% if not hide_inactive %}&amp;hide_inactive=0{% endif %}">Orders</a></th>
         <th class="num"><a class="{% if sort == 'units' %}on{% endif %}" href="?{{ range_query }}&amp;sort=units{% if not hide_free %}&amp;hide_free=0{% endif %}{% if not hide_zero %}&amp;hide_zero=0{% endif %}{% if not hide_inactive %}&amp;hide_inactive=0{% endif %}">Units</a></th>
+        <th class="num"><a class="{% if sort == 'refunds' %}on{% endif %}" href="?{{ range_query }}&amp;sort=refunds{% if not hide_free %}&amp;hide_free=0{% endif %}{% if not hide_zero %}&amp;hide_zero=0{% endif %}{% if not hide_inactive %}&amp;hide_inactive=0{% endif %}" title="Units returned among what sold in this window">Refunds</a></th>
         <th class="num"><a class="{% if sort == 'revenue' %}on{% endif %}" href="?{{ range_query }}&amp;sort=revenue{% if not hide_free %}&amp;hide_free=0{% endif %}{% if not hide_zero %}&amp;hide_zero=0{% endif %}{% if not hide_inactive %}&amp;hide_inactive=0{% endif %}">Net sales</a></th>
         <th class="num"><a class="{% if sort == 'share' %}on{% endif %}" href="?{{ range_query }}&amp;sort=share{% if not hide_free %}&amp;hide_free=0{% endif %}{% if not hide_zero %}&amp;hide_zero=0{% endif %}{% if not hide_inactive %}&amp;hide_inactive=0{% endif %}" title="Share of net sales in this window, after the filters on this table">Share</a></th>
         <th class="num"><a class="{% if sort == 'profit' %}on{% endif %}" href="?{{ range_query }}&amp;sort=profit{% if not hide_free %}&amp;hide_free=0{% endif %}{% if not hide_zero %}&amp;hide_zero=0{% endif %}{% if not hide_inactive %}&amp;hide_inactive=0{% endif %}">Profit</a></th>
@@ -134,11 +135,19 @@
               <a href="{% url 'web:product_detail' row.product_id %}?{{ range_query }}">{{ row.label }}</a>
             {% else %}{{ row.label }}{% endif %}
             {% if row.is_free %}<span class="pill">free</span>{% endif %}
-            {% if row.refunds %}<span class="pill warn">refunds</span>{% endif %}
             {% include "web/_catalog_status.html" with status=row.catalog_status %}
           </td>
           <td class="num">{{ row.orders|intcomma }}</td>
           <td class="num">{{ row.units|intcomma }}</td>
+          <td class="num">
+            {% if row.refunded_units %}
+              {% if row.product_id %}
+                <a href="{% url 'web:refunds' %}?{{ range_query }}&amp;product={{ row.product_id }}">{{ row.refunded_units|floatformat:0 }}</a>
+              {% else %}{{ row.refunded_units|floatformat:0 }}{% endif %}
+            {% else %}
+              <span class="muted">0</span>
+            {% endif %}
+          </td>
           <td class="num">{% if row.is_free %}£0.00{% else %}£{{ row.net_revenue|floatformat:2 }}{% endif %}</td>
           <td class="num">{% if row.revenue_share_pct is not None %}{{ row.revenue_share_pct|floatformat:1 }}%{% else %}—{% endif %}</td>
           <td class="num">
@@ -160,7 +169,7 @@
           </td>
         </tr>
       {% empty %}
-        <tr><td colspan="8" class="muted">No products match these filters. Sync Shopify orders first, or show free / zero-order rows.</td></tr>
+        <tr><td colspan="9" class="muted">No products match these filters. Sync Shopify orders first, or show free / zero-order rows.</td></tr>
       {% endfor %}
     </tbody>
   </table>

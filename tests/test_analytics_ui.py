@@ -314,7 +314,9 @@ def test_products_page_shows_refunded_profit_instead_of_a_blank(
 
     assert listing.status_code == detail.status_code == 200
     assert b"Returned Hoodie" in listing.content
-    assert b">refunds</span>" in listing.content
+    assert b"sort=refunds" in listing.content
+    assert b'pill warn">refunds' not in listing.content
+    assert f"product={product.pk}".encode() in listing.content
     assert b'class="neg"' in listing.content
     assert b"print cost kept" in detail.content
     assert b'class="neg"' in detail.content

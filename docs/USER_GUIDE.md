@@ -263,12 +263,12 @@ There is no overnight job and no extra refresh button. After you import a bank f
 **What you see**
 
 - Shop totals: units, net sales, contribution profit, cost coverage.
-- A table of products (sortable), including each row’s share of net sales in the selected window.
+- A table of products (sortable), including each row’s share of net sales and how many units were refunded in the selected window.
 - Free £0 downloads, archived listings, and products with no orders hidden by default (toggles at the top). The share % is of the rows still shown.
 
 **What you can do**
 
-- Change dates; sort by name, units, orders, revenue, share, profit or margin.
+- Change dates; sort by name, units, orders, refunds, revenue, share, profit or margin.
 - Open a product for the detail page.
 - Download the table.
 

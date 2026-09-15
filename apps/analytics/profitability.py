@@ -899,6 +899,8 @@ def rank_products(
         return sorted(rows, key=lambda row: row.label.casefold())
     if sort == "orders":
         return sorted(rows, key=lambda row: -row.orders)
+    if sort == "refunds":
+        return sorted(rows, key=lambda row: -row.refunded_units)
     if sort == "revenue":
         return sorted(rows, key=lambda row: -row.net_revenue)
     if sort == "share":
