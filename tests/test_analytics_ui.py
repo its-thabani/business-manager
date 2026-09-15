@@ -298,11 +298,13 @@ def test_customers_page_separates_new_and_returning(client, make_product, make_o
     make_order(lines=[(product.variants.get(), 1, "34.99")], customer=newbie, when=date(2026, 6, 20))
 
     listing = client.get("/customers/?range=all")
-    assert listing.status_code == 200
+    june_returning = client.get("/customers/?start=2026-06-01&end=2026-06-30&mix=returning")
+    assert listing.status_code == june_returning.status_code == 200
     assert b"Ada Lovelace" in listing.content
     assert b"Grace Hopper" in listing.content
-    assert b"returning" in listing.content
-    assert b"new" in listing.content
+    assert b"Ada Lovelace" in june_returning.content
+    assert b"Grace Hopper" not in june_returning.content
+    assert b"New only" in listing.content
 
     detail = client.get(f"/customers/{returning.pk}/?range=all")
     assert detail.status_code == 200

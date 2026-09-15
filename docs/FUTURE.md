@@ -46,6 +46,38 @@ A tiny form: date, amount, note → books as **Direct Sales Income** (locked).
 Stops “paid to my account, transferred in” being treated as Salary again.
 Do not invent a Shopify order for it.
 
+### Printer VAT and “checkout” cost (Laura, 15 Sep 2026)
+
+She prices a garment as print + shipping + VAT (and +£4.20 before tax for a
+second print). The app uses Inkthreadable **net** print + postage, and
+**excludes** VAT the customer paid. Linked invoices store tax but contribution
+profit does not add it. Next slice: optionally cost from `total` (VAT-inclusive)
+on linked jobs, and a double-sided / neck-label SKU on mapping.
+
+### Exchanges, sale reprints, already-printed stock
+
+A size swap is paid for twice at the printer; the original often sells later
+on sale. The app sees a refund, a new order, and sometimes a Shopify discount
+workaround (#1332). No first-class exchange or “already printed / shipping
+only” product type yet. Until then: mark sale listings digital or override
+cost; do not expect Shipping −£ rows to pair with the original order.
+
+### Bulk mapping and live listings only
+
+Same blank (AT002 / JH001) on every tee/hoodie. Confirm-all-of-this-blank
+would save clicks. Drafts/archived without sales are now hidden on Mapping;
+a true “live listings only” Shopify filter can wait.
+
+### Manual cash match
+
+Unmatched sales days / payouts / Ink charges are wait-lists. A person picking
+“this payout is those three days” is the missing control.
+
+### Insights: best size sold vs returned
+
+Product detail already has size mix of what sold; Refunds can be filtered to
+one product. A shop-wide size sold-vs-returned line on Insights is still open.
+
 ---
 
 ## Once the monthly ritual hurts
@@ -98,8 +130,9 @@ replace it until the API path is as careful about existing categories.
 
 ## How to pick the next slice
 
-1. Recategorise-in-app + unlock-profit queue (highest leftover friction).
-2. Cost-changed warning and/or direct-sales form if those keep biting.
+1. Unlock-profit queue, then printer-VAT / double-sided cost if margins still
+   feel “too good”.
+2. Exchanges / already-printed stock if sale listings keep distorting profit.
 3. Tax-year pack or a monthly digest when an accountant or a forgotten tab
    is the pain.
 4. Everything in “only if the business changes” stays parked until it does.

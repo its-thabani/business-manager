@@ -120,6 +120,16 @@ class TestAmountConditions:
         assert subscription.category.name == "Store Hosting"
         assert subscription.category.kind == CategoryKind.OPERATING
 
+    def test_inkthreadable_credit_is_a_supplier_refund_not_a_sale(self, seeded, make_txn):
+        credit = make_txn("12.00", counterparty="Inkthreadable")
+        debit = make_txn("-12.00", counterparty="Inkthreadable")
+        categorise()
+        credit.refresh_from_db()
+        debit.refresh_from_db()
+        assert credit.category.name == "Supplier refund"
+        assert credit.category.kind == CategoryKind.COGS
+        assert debit.category.name == "Apparel"
+
     def test_positive_only_rule_ignores_debits(self, seeded, make_txn):
         rule_category = Category.objects.get(name="Events")
         CategoryRule.objects.create(
@@ -226,6 +236,6 @@ class TestLocksAndReruns:
         make_txn("-13.96", counterparty="Inkthreadable", when=date(2026, 1, 5))
         make_txn("-20.00", counterparty="Inkthreadable", when=date(2026, 1, 6))
         categorise()
-        rule = CategoryRule.objects.get(pattern="INKTHREADABLE")
+        rule = CategoryRule.objects.get(pattern="INKTHREADABLE", category__name="Apparel")
         assert rule.match_count == 2
         assert rule.last_matched_at is not None

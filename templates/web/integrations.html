@@ -52,6 +52,17 @@
     Press a button. Shopify is usually a few minutes. Inkthreadable can take much longer
     the first time — leave this page open so the update can finish.
   </p>
+  <p class="muted">
+    <strong>Update Inkthreadable</strong> pulls the print jobs you placed with them
+    (items, net product price, postage, VAT).
+    <strong>Link supplier orders</strong> then attaches those jobs to Shopify orders
+    using the order reference, and rebuilds Blanks. About
+    <em>216 linked</em> means that many printer invoices already point at a Shopify
+    order. Unlinked jobs are usually Wix / Etsy / the website, or a missing ref.
+    Product profit uses the linked invoice when there is one (net print + postage,
+    not the VAT line, and not the customer’s checkout total). Mapping is the
+    fallback when a job is not linked.
+  </p>
   <div class="actions">
     <form method="post">{% csrf_token %}
       <input type="hidden" name="action" value="sync_shopify">

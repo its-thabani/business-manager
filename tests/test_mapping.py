@@ -348,6 +348,24 @@ def test_mapping_page_lists_unmapped_bestsellers(client, make_order):
     assert b"unmapped" in response.content
 
 
+def test_mapping_page_hides_unsold_drafts_by_default(client):
+    from apps.catalog.models import ProductStatus
+
+    Product.objects.create(
+        title="Old draft listing",
+        handle="old-draft-listing",
+        status=ProductStatus.DRAFT,
+        shopify_id="gid://shopify/Product/draft-hide",
+    )
+
+    hidden = client.get("/mapping/?filter=all")
+    shown = client.get("/mapping/?filter=all&drafts=1")
+
+    assert hidden.status_code == shown.status_code == 200
+    assert b"Old draft listing" not in hidden.content
+    assert b"Old draft listing" in shown.content
+
+
 def test_mapping_page_can_mark_a_product_digital(client):
     product = _shop_product("Verse card", [("", "", "", "3.00")], product_type="Digital")
 

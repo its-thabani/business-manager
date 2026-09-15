@@ -99,6 +99,13 @@ CATEGORIES: tuple[CategorySeed, ...] = (
         sort_order=20,
     ),
     CategorySeed(
+        "Supplier refund",
+        CategoryKind.COGS,
+        "Money back from Inkthreadable (print error, reprint credit). Reduces printer cost; it is not a sale.",
+        colour="#B91C1C",
+        sort_order=19,
+    ),
+    CategorySeed(
         "Stock",
         CategoryKind.COGS,
         "Stock purchased and held rather than printed to order",
@@ -282,6 +289,13 @@ ADDED_RULES: tuple[RuleSeed, ...] = (
         name="ADDED — Stripe settlement is a Shopify payout, not hosting",
         amount_condition=AmountCondition.POSITIVE,
         priority=10,
+    ),
+    RuleSeed(
+        "INKTHREADABLE",
+        "Supplier refund",
+        name="ADDED — Inkthreadable credit is a supplier refund, not a sale",
+        amount_condition=AmountCondition.POSITIVE,
+        priority=15,
     ),
     # The Shopify subscription debit, kept distinct from the payout rule above.
     RuleSeed(

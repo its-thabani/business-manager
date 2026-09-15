@@ -28,7 +28,7 @@
     <thead>
       <tr>
         <th><a class="{% if sort == 'name' %}on{% endif %}" href="?{{ range_query }}&amp;sort=name{% if not hide_free %}&amp;hide_free=0{% endif %}">Group</a></th>
-        <th class="num">Members</th>
+        <th class="num" title="How many Shopify products sit in this group">Products</th>
         <th class="num"><a class="{% if sort == 'orders' %}on{% endif %}" href="?{{ range_query }}&amp;sort=orders{% if not hide_free %}&amp;hide_free=0{% endif %}">Orders</a></th>
         <th class="num"><a class="{% if sort == 'units' %}on{% endif %}" href="?{{ range_query }}&amp;sort=units{% if not hide_free %}&amp;hide_free=0{% endif %}">Units</a></th>
         <th class="num"><a class="{% if sort == 'revenue' %}on{% endif %}" href="?{{ range_query }}&amp;sort=revenue{% if not hide_free %}&amp;hide_free=0{% endif %}">Net sales</a></th>

@@ -111,6 +111,7 @@ def test_simulate_page_renders(client, make_product, map_variant, make_order):
 
     assert response.status_code == 200
     assert b"Assumptions" in response.content
+    assert b"only the boxes" in response.content
     assert b"Classic Tee" in response.content
 
 

@@ -10,9 +10,12 @@
   {% include "web/_export.html" %}
 
   <nav class="chips" aria-label="Customer filters">
-    <a class="{% if hide_free %}on{% endif %}" href="?{{ range_query }}&amp;sort={{ sort }}{% if hide_free %}&amp;hide_free=0{% endif %}">
+    <a class="{% if hide_free %}on{% endif %}" href="?{{ range_query }}&amp;sort={{ sort }}{% if mix != 'all' %}&amp;mix={{ mix }}{% endif %}{% if hide_free %}&amp;hide_free=0{% endif %}">
       {% if hide_free %}Paid orders only{% else %}Including £0 downloads{% endif %}
     </a>
+    <a class="{% if mix == 'all' %}on{% endif %}" href="?{{ range_query }}&amp;sort={{ sort }}{% if not hide_free %}&amp;hide_free=0{% endif %}">All buyers</a>
+    <a class="{% if mix == 'new' %}on{% endif %}" href="?{{ range_query }}&amp;sort={{ sort }}&amp;mix=new{% if not hide_free %}&amp;hide_free=0{% endif %}">New only</a>
+    <a class="{% if mix == 'returning' %}on{% endif %}" href="?{{ range_query }}&amp;sort={{ sort }}&amp;mix=returning{% if not hide_free %}&amp;hide_free=0{% endif %}">Returning only</a>
   </nav>
 
   <div class="cards">
@@ -80,11 +83,11 @@
   <table>
     <thead>
       <tr>
-        <th><a class="{% if sort == 'name' %}on{% endif %}" href="?{{ range_query }}&amp;sort=name{% if not hide_free %}&amp;hide_free=0{% endif %}">Customer</a></th>
-        <th><a class="{% if sort == 'first' %}on{% endif %}" href="?{{ range_query }}&amp;sort=first{% if not hide_free %}&amp;hide_free=0{% endif %}">First paid</a></th>
-        <th><a class="{% if sort == 'last' %}on{% endif %}" href="?{{ range_query }}&amp;sort=last{% if not hide_free %}&amp;hide_free=0{% endif %}">Last paid</a></th>
-        <th class="num"><a class="{% if sort == 'orders' %}on{% endif %}" href="?{{ range_query }}&amp;sort=orders{% if not hide_free %}&amp;hide_free=0{% endif %}">Orders</a></th>
-        <th class="num"><a class="{% if sort == 'spend' %}on{% endif %}" href="?{{ range_query }}&amp;sort=spend{% if not hide_free %}&amp;hide_free=0{% endif %}">Spend</a></th>
+        <th><a class="{% if sort == 'name' %}on{% endif %}" href="?{{ range_query }}&amp;sort=name{% if mix != 'all' %}&amp;mix={{ mix }}{% endif %}{% if not hide_free %}&amp;hide_free=0{% endif %}">Customer</a></th>
+        <th><a class="{% if sort == 'first' %}on{% endif %}" href="?{{ range_query }}&amp;sort=first{% if mix != 'all' %}&amp;mix={{ mix }}{% endif %}{% if not hide_free %}&amp;hide_free=0{% endif %}">First paid</a></th>
+        <th><a class="{% if sort == 'last' %}on{% endif %}" href="?{{ range_query }}&amp;sort=last{% if mix != 'all' %}&amp;mix={{ mix }}{% endif %}{% if not hide_free %}&amp;hide_free=0{% endif %}">Last paid</a></th>
+        <th class="num"><a class="{% if sort == 'orders' %}on{% endif %}" href="?{{ range_query }}&amp;sort=orders{% if mix != 'all' %}&amp;mix={{ mix }}{% endif %}{% if not hide_free %}&amp;hide_free=0{% endif %}">Orders</a></th>
+        <th class="num"><a class="{% if sort == 'spend' %}on{% endif %}" href="?{{ range_query }}&amp;sort=spend{% if mix != 'all' %}&amp;mix={{ mix }}{% endif %}{% if not hide_free %}&amp;hide_free=0{% endif %}">Spend</a></th>
         <th></th>
       </tr>
     </thead>

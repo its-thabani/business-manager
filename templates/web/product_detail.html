@@ -10,6 +10,7 @@
   <p class="period">
     <a href="{% url 'web:products' %}?{{ range_query }}">← Products</a>
     · <a href="{% url 'web:mapping_detail' product.pk %}">Mapping</a>
+    · <a href="{% url 'web:refunds' %}?{{ range_query }}&amp;product={{ product.pk }}">Sizes returned</a>
     {% if mapping.no_supplier %}
       · <span class="pill good">digital</span>
     {% elif mapping.supplier_product %}
@@ -70,7 +71,7 @@
       </div>
     </div>
     <div class="chart">
-      <div class="label">Size mix</div>
+      <div class="label">Size mix (what sold)</div>
       {% for row in sizes %}
         <div class="hbar">
           <div class="name">{{ row.value }}</div>

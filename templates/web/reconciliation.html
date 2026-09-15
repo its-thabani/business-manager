@@ -11,6 +11,22 @@
     Shopify opened on 16 Jul 2025 (order #1001). Bank activity before that is from the
     Wix storefront and will not match Shopify payouts.
   </p>
+  <p class="muted">
+    <strong>Expected after fees</strong> is Shopify net sales minus
+    <em>card processing</em> (Stripe / Shopify Payments — about 1.5% + 20p per
+    order when Shopify did not send the actual fee). It is
+    <strong>not</strong> the Shopify monthly subscription; that sits on Expenses
+    as Store Hosting.
+  </p>
+  <p class="muted">
+    <strong>Cash gap</strong> is expected cash minus Stripe/Adyen that actually
+    landed in this period. A positive gap means sales are waiting to be paid out
+    (usually a few days later), not that an expense is missing from the bank.
+    Unmatched lists below are wait-lists: there is nothing to click until a
+    payout or invoice lines up on amount and date. Confirm only the suggested
+    matches. Money <em>in</em> from Inkthreadable is a printer credit — categorise
+    it as <strong>Supplier refund</strong> on Expenses; it is not a sale.
+  </p>
 
   <div class="cards">
     <div class="card">
@@ -21,7 +37,7 @@
     <div class="card">
       <div class="label">Expected after fees</div>
       <div class="value">£{{ report.expected_cash|floatformat:2 }}</div>
-      <div class="period">fees £{{ report.shopify_fees|floatformat:2 }}</div>
+      <div class="period">card fees £{{ report.shopify_fees|floatformat:2 }} · not the Shopify subscription</div>
     </div>
     <div class="card">
       <div class="label">Bank received</div>
@@ -33,7 +49,7 @@
       <div class="value {% if report.cash_gap > 0 %}warn{% elif report.cash_gap < 0 %}neg{% else %}pos{% endif %}">
         {% if report.cash_gap > 0 %}+{% endif %}£{{ report.cash_gap|floatformat:2 }}
       </div>
-      <div class="period">{% if report.cash_gap > 0 %}sales not yet in the bank{% elif report.cash_gap < 0 %}bank ahead of this period's sales{% else %}in step{% endif %}</div>
+      <div class="period">{% if report.cash_gap > 0 %}sales not yet paid out by Stripe{% elif report.cash_gap < 0 %}bank ahead of this period's sales{% else %}in step{% endif %}</div>
     </div>
   </div>
 
@@ -167,6 +183,11 @@
 
   {% if report.unmatched_days %}
     <h2>Unmatched sales days</h2>
+    <p class="muted">
+      These Shopify days have not lined up with a Stripe deposit yet (amount and
+      date within about 10 days). Leave them. A later payout usually takes them.
+      They are already in the cash gap above.
+    </p>
     <table>
       <thead>
         <tr>
@@ -196,6 +217,11 @@
 
   {% if report.unmatched_payouts %}
     <h2>Unmatched payouts</h2>
+    <p class="muted">
+      Stripe/Adyen money that did not match a sales day in this window (often a
+      batch covering several days, or Wix-era). Confirm only if it appears in
+      the suggested matches above.
+    </p>
     <table>
       <thead>
         <tr>
@@ -276,6 +302,12 @@
 
   {% if report.unmatched_charges %}
     <h2>Unmatched Inkthreadable charges</h2>
+    <p class="muted">
+      Money that left Monzo to Inkthreadable without a matching invoice in the
+      same window (several jobs in one bank charge, or a Wix/Etsy job). The
+      charge is already on Expenses. A printer credit (money in) is not listed
+      here — override it to Supplier refund on Expenses.
+    </p>
     <table>
       <thead>
         <tr>

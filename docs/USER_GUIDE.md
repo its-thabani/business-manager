@@ -139,11 +139,10 @@ Transfers and excluded rows are not listed.
 
 **What you see**
 
-- Shopify net sales vs expected cash after fees vs Stripe/Adyen received, and the **cash gap**.
+- Shopify net sales vs **expected cash after card fees** vs Stripe/Adyen received, and the **cash gap**.
 - Inkthreadable leaving the bank vs supplier invoices vs estimated fulfilment.
-- How many payouts and sales days are matched or still open.
-- A monthly chart of expected cash, bank payouts and printer spend.
 - Suggested matches you can confirm or clear.
+- Unmatched sales days, payouts, and Inkthreadable charges — wait-lists, not a second matching exercise.
 
 **What you can do**
 
@@ -151,15 +150,22 @@ Transfers and excluded rows are not listed.
 - **Confirm** a suggested Shopify-day → Stripe/Adyen match.
 - **Confirm** an Inkthreadable invoice → bank charge.
 - **Clear** a suggestion that is wrong.
-- Run **Suggest bank matches** from Data health first if the list is empty.
+- Run **Suggest bank matches** from Data health first if the suggested list is empty.
 
 Confirmed links are **not** overwritten the next time suggestions run.
+
+**How the numbers work**
+
+- **Expected after fees** = Shopify net sales (after discounts and refunds, excluding VAT) minus **card processing** (Stripe / Shopify Payments). It is **not** the Shopify monthly subscription (that is Store Hosting on Expenses).
+- **Cash gap** = expected cash minus Stripe/Adyen that actually landed in the dates you picked. A positive gap means sales are waiting to be paid out (usually a few days). It is not a missing expense.
+- Unmatched rows stay unmatched until amount and date line up. There is no button to force a match. Leave them; a later payout often takes a sales day.
+- Money **in** from Inkthreadable is a printer credit. Categorise it as **Supplier refund** on Expenses (reduces printer cost). It is not a sale, and it is not listed as an unmatched charge.
 
 **What it can tell you**
 
 - Whether this month’s sales have actually landed.
 - Whether the printer has been paid in line with invoices.
-- Which deposits or charges still need a person.
+- Which deposits or charges still need a person — or just time.
 
 ---
 
@@ -184,8 +190,9 @@ Confirmed links are **not** overwritten the next time suggestions run.
 - Lowest **priority** number is tried first. The first match wins.
 - Matching ignores case and extra spaces.
 - **Direction** matters: Shopify payouts and the Shopify subscription both say “SHOPIFY”. Money in vs money out is what separates revenue from hosting.
+- Money **in** from Inkthreadable is a **Supplier refund** (cost of goods), not Income. Income would inflate sales. Apply rules after adding the rule.
 
-To put one row in a category by hand (and lock it): use the category menu on **Expenses**.
+To put one row in a category by hand (and lock it): **Override** on **Expenses**.
 
 ---
 
@@ -200,8 +207,8 @@ To put one row in a category by hand (and lock it): use the category menu on **E
 | **Import bank CSV** | Upload a Monzo export. Overlapping months are fine. Rows already held are left alone, including categories you set by hand. |
 | **Import spreadsheet** | Read the Finance Dashboard `.xlsx` once for older history. The file is never overwritten. |
 | **Update Shopify** | Pull products and orders. Usually a few minutes. |
-| **Update Inkthreadable** | Pull printer fulfilments and costs. The first run can take a long time. |
-| **Link supplier orders** | Attach Inkthreadable jobs to Shopify orders using the saved refs. Also rebuilds Blanks from those invoices (AT002 / AWDis 180). Leave the page open; it refreshes until it finishes. Does not call the API. Wix / Etsy / website jobs stay unmatched. |
+| **Update Inkthreadable** | Pull printer jobs you placed (items, net product, postage, VAT). |
+| **Link supplier orders** | Attach those jobs to Shopify orders using the saved refs. Also rebuilds Blanks from those invoices (AT002 / AWDis 180). Leave the page open; it refreshes until it finishes. Does not call the API. Wix / Etsy / website jobs stay unmatched. Product profit uses the linked invoice when there is one. |
 | **Suggest product mappings** | Guess Shopify → blank matches. Confirmed mappings are left alone. |
 | **Suggest bank matches** | Suggest Stripe and Inkthreadable links. Confirmed links are left alone. |
 
@@ -275,6 +282,10 @@ A **green or red** profit with a complete pill is the real total — every sold 
 
 A product or variant still showing **—** has no cost of its own. Click **add cost** to open Mapping for that product. Do not read a group approximation as that line’s profit.
 
+A **red / negative** profit is usually a refund or exchange: the customer was paid back, but the print was already done so the cost stays. That is intentional.
+
+Profit uses **net** printer prices (what Inkthreadable charged before VAT) and **excludes** VAT the customer paid at checkout. Your own pricing (garment + shipping + tax, single vs double sided) will therefore look more expensive than the app’s cost. Double-sided and neck-label extras are included only when that job’s invoice (or mapped SKU) includes them.
+
 To replace an approximation with a real total: map the variant on **Mapping**, run **Link supplier orders** on Data health, or enter **Cost per item** on the Shopify variant.
 
 ---
@@ -288,7 +299,7 @@ To replace an approximation with a real total: map the variant on **Mapping**, r
 - The product name in the heading (and the browser tab).
 - Units, net sales, contribution profit, refund rate, each vs the previous window of the same length.
 - Monthly sales chart.
-- Size mix and colour mix of what sold.
+- Size mix and colour mix of what sold. **Sizes returned** opens Refunds filtered to this product.
 - Variants that sold, with profit when cost is known.
 - The full catalogue of variants (size, colour, SKU, price).
 - Links back to Products and to Mapping.
@@ -308,7 +319,7 @@ To replace an approximation with a real total: map the variant on **Mapping**, r
 **What you see**
 
 - The same style of totals as Products, per group.
-- A table of groups; click through for the products in that group.
+- A table of groups; **Products** is how many Shopify listings sit in that group. Click through for the products in the group.
 - **~ approx.** profit / margin when only some items in the group have a printer cost. Complete groups stay green or red.
 
 **What it can tell you**
@@ -332,6 +343,7 @@ To replace an approximation with a real total: map the variant on **Mapping**, r
 **What you can do**
 
 - Paid orders only (default) vs including £0 downloads.
+- **All buyers / New only / Returning only** on the table (snapshot, no hunting).
 - Change dates; sort; download.
 
 **What it can tell you**
@@ -367,6 +379,8 @@ Guests with no email stay **unidentified** and are left out of rates rather than
 
 Refunded garments still cost money. Print-on-demand does not get the shirt back.
 
+Sale / already-printed listings and size exchanges are not a separate type yet. A reprint looks like a new Inkthreadable cost; a sale listing with no new print still uses the mapped blank cost unless you mark it digital or set a shipping-only override. Discount rows that look like “exchanges” are often Shopify workarounds (add/remove lines to change colour).
+
 ---
 
 ### Shipping
@@ -390,7 +404,7 @@ Refunded garments still cost money. Print-on-demand does not get the shirt back.
 - Whether “free UK delivery” is eating contribution.
 - Which countries you ship to, and what they paid.
 
-Cost is **—** until the fulfilment is linked.
+Cost is **—** until the fulfilment is linked. A −£ postage result means you collected less than the printer charged (free shipping, or a reprint/exchange).
 
 ---
 
@@ -439,12 +453,13 @@ Cost is **—** until the fulfilment is linked.
 
 **What you can do**
 
+Leave every box blank except the one change you care about.
+
 - Pick dates and optionally one product (or the whole shop).
-- Set a new unit price, or a £ price change.
+- **Either** a new unit price **or** a £ price change — not both.
 - Optionally change volume (%).
-- Set a new supplier cost, or a £ / % cost change.
-- Add an extra discount (%).
-- Tick **Free shipping**.
+- **Either** a new supplier cost **or** a £ / % cost change.
+- Optionally an extra discount (%) or tick **Pretend shipping was free**.
 - **Run scenario**.
 
 **What you see**
@@ -495,10 +510,10 @@ Do not map those tees onto a hoodie or a Stanley/Stella Rocker just because that
 
 **What you can do**
 
-- Filter: needs review / all / digital / confirmed.
+- Filter: needs review / all / digital / confirmed. Draft and archived listings are hidden unless they have sales.
 - **Suggest mappings** (safe to re-run; confirmed matches stay).
-- Open a product to confirm a suggested blank, pick a blank, mark **digital / no supplier**, or leave it unmapped.
-- Map individual variants when sizes differ.
+- Open a product to confirm a suggested blank, pick a blank, mark **digital / no supplier**, or leave it unmapped. The same blank (AT002, JH001) can be reused on every tee / hoodie / sweatshirt.
+- Map individual variants when sizes or single vs double sided differ.
 - Create a blank on the product page if it has never been invoiced.
 
 **What it can tell you**

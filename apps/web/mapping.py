@@ -9,7 +9,7 @@ from django.db.models import Count, Q, Sum
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
-from apps.catalog.models import Product, ProductVariant
+from apps.catalog.models import Product, ProductStatus, ProductVariant
 from apps.sales.models import OrderLine
 from apps.supplier.mapping import (
     MappingEngine,
@@ -99,6 +99,13 @@ def mapping_list(request):
         )
 
     selected = request.GET.get("filter", "needs_review")
+    include_drafts = request.GET.get("drafts") == "1"
+    if not include_drafts:
+        rows = [
+            row
+            for row in rows
+            if row["product"].status == ProductStatus.ACTIVE or row["units"]
+        ]
     totals = {
         "sold_units": sum(units_by_product.values()),
         "units_with_cost": sum(mapped_units_by_product.values()),
@@ -118,6 +125,7 @@ def mapping_list(request):
             "nav": "mapping",
             "rows": rows,
             "selected_filter": selected,
+            "include_drafts": include_drafts,
             "totals": totals,
             "missing_units": missing_units,
         },

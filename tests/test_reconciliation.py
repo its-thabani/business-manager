@@ -305,6 +305,7 @@ def test_reconciliation_page_shows_the_gap(client, make_product, make_order, mak
 
     assert response.status_code == 200
     assert b"Expected after fees" in response.content
+    assert b"card processing" in response.content
     assert b"19.00" in response.content
     assert b"suggested" in response.content
     assert b"Monthly sales vs payouts" in response.content

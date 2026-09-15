@@ -833,6 +833,13 @@ def customers(request):
 
     metrics = compute_customer_metrics(date_range, paid_only=hide_free)
     rows = rank_customers(metrics.rows, sort=sort)
+    mix = request.GET.get("mix", "all")
+    if mix not in {"all", "new", "returning"}:
+        mix = "all"
+    if mix == "new":
+        rows = [row for row in rows if row.is_new]
+    elif mix == "returning":
+        rows = [row for row in rows if row.is_returning]
     months = column_chart(monthly_customer_mix(metrics, date_range), ["new", "returning"])
     if wants_csv(request):
         return csv_response(
@@ -865,6 +872,7 @@ def customers(request):
             "metrics": metrics,
             "customers": rows,
             "months": months,
+            "mix": mix,
             "extra_query": "" if hide_free else "hide_free=0",
         },
     )
