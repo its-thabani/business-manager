@@ -11,7 +11,7 @@ from apps.catalog.models import ProductGroup
 from apps.finance.models import CategoryRule, CategorySource
 from apps.sales.models import Customer
 from apps.supplier.models import SupplierOrder
-from apps.web.charts import column_chart, share_bars
+from apps.web.charts import column_chart, pie_slices, share_bars
 
 pytestmark = pytest.mark.django_db
 
@@ -40,6 +40,22 @@ def test_share_bars_keep_the_largest_item_at_full_width():
     assert [row["label"] for row in rows] == ["A", "B"]
     assert rows[0]["bar_pct"] == 100
     assert rows[1]["bar_pct"] == 50
+
+
+def test_pie_slices_are_shares_of_the_sum():
+    slices = pie_slices(
+        [
+            {"label": "Hoodies", "revenue": Decimal("80.00"), "colour": "#4f46e5"},
+            {"label": "T-Shirts", "revenue": Decimal("20.00"), "colour": "#818cf8"},
+        ],
+        value_key="revenue",
+    )
+
+    assert slices[0]["start_pct"] == 0
+    assert slices[0]["end_pct"] == 80
+    assert slices[1]["start_pct"] == 80
+    assert slices[1]["end_pct"] == 100
+    assert slices[1]["share_pct"] == 20
 
 
 def test_cash_dashboard_includes_the_monthly_chart(client, make_txn, category_by_name):
@@ -238,6 +254,73 @@ def test_products_page_hides_free_downloads_by_default(client, make_product, mak
     assert b"Bible Verse Pack" in shown.content
 
 
+def test_products_page_hides_archived_listings_by_default(
+    client, make_product, make_order
+):
+    from apps.catalog.models import ProductStatus
+
+    live = make_product(title="Live Hoodie", variants=[("Black", "L", "34.99")])
+    archived = make_product(title="Old Forest Hoodie", variants=[("Forest", "L", "34.99")])
+    archived.status = ProductStatus.ARCHIVED
+    archived.save(update_fields=["status"])
+    make_order(lines=[(live.variants.get(), 1, "34.99")])
+    make_order(lines=[(archived.variants.get(), 1, "34.99")])
+
+    hidden = client.get("/products/?range=all")
+    shown = client.get("/products/?range=all&hide_inactive=0")
+    detail = client.get(f"/products/{archived.pk}/?range=all")
+
+    assert b"Live Hoodie" in hidden.content
+    assert b"Old Forest Hoodie" not in hidden.content
+    assert b"Live listings only" in hidden.content
+    assert b"Old Forest Hoodie" in shown.content
+    assert b"archived" in shown.content
+    assert detail.status_code == 200
+    assert b"archived" in detail.content
+
+
+def test_products_page_share_column_follows_the_period_and_filters(
+    client, make_product, make_order
+):
+    hoodie = make_product(title="Share Hoodie", variants=[("Black", "L", "40.00")])
+    tee = make_product(title="Share Tee", variants=[("Black", "L", "10.00")])
+    make_order(lines=[(hoodie.variants.get(), 2, "40.00")], when=date(2026, 7, 10), shipping_charged="0.00")
+    make_order(lines=[(tee.variants.get(), 2, "10.00")], when=date(2026, 7, 10), shipping_charged="0.00")
+    make_order(lines=[(tee.variants.get(), 1, "10.00")], when=date(2026, 8, 10), shipping_charged="0.00")
+
+    july = client.get("/products/?start=2026-07-01&end=2026-07-31")
+    august = client.get("/products/?start=2026-08-01&end=2026-08-31")
+
+    assert july.status_code == august.status_code == 200
+    assert b"sort=share" in july.content
+    assert b"80.0%" in july.content
+    assert b"20.0%" in july.content
+    assert b"Share Hoodie" not in august.content
+    assert b"100.0%" in august.content
+    assert b"Share Tee" in august.content
+
+
+def test_products_page_shows_refunded_profit_instead_of_a_blank(
+    client, make_product, map_variant, make_order, refund_order
+):
+    product = make_product(title="Returned Hoodie", variants=[("Black", "L", "34.99")])
+    variant = product.variants.get()
+    map_variant(variant, cost="12.00")
+    order = make_order(lines=[(variant, 1, "34.99")], shipping_charged="0.00")
+    refund_order(order, amount="34.99")
+
+    listing = client.get("/products/?range=all")
+    detail = client.get(f"/products/{product.pk}/?range=all")
+
+    assert listing.status_code == detail.status_code == 200
+    assert b"Returned Hoodie" in listing.content
+    assert b">refunds</span>" in listing.content
+    assert b'class="neg"' in listing.content
+    assert b"print cost kept" in detail.content
+    assert b'class="neg"' in detail.content
+    assert b"Returned Hoodie" in detail.content
+
+
 def test_orders_page_hides_zero_pound_downloads_by_default(client, make_product, make_order):
     product = make_product(variants=[("Black", "L", "34.99")])
     paid = make_order(lines=[(product.variants.get(), 1, "34.99")])
@@ -423,6 +506,8 @@ def test_groups_page_ranks_hoodies_and_tees(client, make_product, make_order):
     assert b"Contribution profit" in detail.content
     assert b"Mapping" in detail.content
     assert b"none of the sold lines have a printer cost" in detail.content
+    assert b"Share of net sales" in listing.content
+    assert b"conic-gradient" in listing.content
 
 
 def test_pages_accept_a_custom_date_range(client, make_txn, category_by_name):

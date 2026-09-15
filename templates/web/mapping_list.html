@@ -44,7 +44,10 @@
     <a href="{% url 'web:blank_list' %}">Blanks</a> — if that row is missing,
     refresh it from <a href="{% url 'web:integrations' %}">Data health</a>
     (Link supplier orders), then press Suggest mappings here.
-    Draft and archived listings stay hidden unless they have sales (Wix leftovers).
+    Drafts and archived listings with no sales stay hidden. Archived products
+    that sold are listed so you can still map a cost — they are labelled
+    <strong>archived</strong>. Use <strong>Show drafts &amp; archived</strong>
+    for never-sold leftovers.
     One blank (AT002, JH001, …) can cover many products — open any tee, set the
     blank, then confirm; repeat for the next design. Double-sided and neck-label
     extras only show if Inkthreadable invoiced them on that job, or if that
@@ -77,6 +80,7 @@
         <tr>
           <td>
             <a href="{% url 'web:mapping_detail' row.product.pk %}">{{ row.product.title }}</a>
+            {% include "web/_catalog_status.html" with status=row.product.status %}
             <div class="muted">{{ row.product.product_type|default:"" }}</div>
           </td>
           <td>

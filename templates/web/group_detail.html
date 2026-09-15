@@ -27,24 +27,30 @@
   {% include "web/_cost_hint.html" %}
 
   <nav class="chips" aria-label="Table filters">
-    <a class="{% if hide_free %}on{% endif %}" href="?{{ range_query }}&amp;sort={{ sort }}{% if not hide_zero %}&amp;hide_zero=0{% endif %}{% if hide_free %}&amp;hide_free=0{% endif %}">
+    <a class="{% if hide_free %}on{% endif %}" href="?{{ range_query }}&amp;sort={{ sort }}{% if not hide_zero %}&amp;hide_zero=0{% endif %}{% if not hide_inactive %}&amp;hide_inactive=0{% endif %}{% if hide_free %}&amp;hide_free=0{% endif %}">
       {% if hide_free %}Showing paid only{% else %}Include £0 / free downloads{% endif %}
     </a>
-    <a class="{% if hide_zero %}on{% endif %}" href="?{{ range_query }}&amp;sort={{ sort }}{% if not hide_free %}&amp;hide_free=0{% endif %}{% if hide_zero %}&amp;hide_zero=0{% endif %}">
+    <a class="{% if hide_zero %}on{% endif %}" href="?{{ range_query }}&amp;sort={{ sort }}{% if not hide_free %}&amp;hide_free=0{% endif %}{% if not hide_inactive %}&amp;hide_inactive=0{% endif %}{% if hide_zero %}&amp;hide_zero=0{% endif %}">
       {% if hide_zero %}Hiding 0-order products{% else %}Include products with 0 orders{% endif %}
     </a>
+    <a class="{% if hide_inactive %}on{% endif %}" href="?{{ range_query }}&amp;sort={{ sort }}{% if not hide_free %}&amp;hide_free=0{% endif %}{% if not hide_zero %}&amp;hide_zero=0{% endif %}{% if hide_inactive %}&amp;hide_inactive=0{% endif %}">
+      {% if hide_inactive %}Live listings only{% else %}Including archived{% endif %}
+    </a>
   </nav>
+  {% if hide_inactive and inactive_count %}
+    <p class="period muted">{{ inactive_count }} archived or draft listing{{ inactive_count|pluralize }} hidden.</p>
+  {% endif %}
 
   <h2>Products in this group</h2>
   <table>
     <thead>
       <tr>
-        <th><a class="{% if sort == 'name' %}on{% endif %}" href="?{{ range_query }}&amp;sort=name{% if not hide_free %}&amp;hide_free=0{% endif %}{% if not hide_zero %}&amp;hide_zero=0{% endif %}">Product</a></th>
-        <th class="num"><a class="{% if sort == 'orders' %}on{% endif %}" href="?{{ range_query }}&amp;sort=orders{% if not hide_free %}&amp;hide_free=0{% endif %}{% if not hide_zero %}&amp;hide_zero=0{% endif %}">Orders</a></th>
-        <th class="num"><a class="{% if sort == 'units' %}on{% endif %}" href="?{{ range_query }}&amp;sort=units{% if not hide_free %}&amp;hide_free=0{% endif %}{% if not hide_zero %}&amp;hide_zero=0{% endif %}">Units</a></th>
-        <th class="num"><a class="{% if sort == 'revenue' %}on{% endif %}" href="?{{ range_query }}&amp;sort=revenue{% if not hide_free %}&amp;hide_free=0{% endif %}{% if not hide_zero %}&amp;hide_zero=0{% endif %}">Net sales</a></th>
-        <th class="num"><a class="{% if sort == 'profit' %}on{% endif %}" href="?{{ range_query }}&amp;sort=profit{% if not hide_free %}&amp;hide_free=0{% endif %}{% if not hide_zero %}&amp;hide_zero=0{% endif %}">Profit</a></th>
-        <th class="num"><a class="{% if sort == 'margin' %}on{% endif %}" href="?{{ range_query }}&amp;sort=margin{% if not hide_free %}&amp;hide_free=0{% endif %}{% if not hide_zero %}&amp;hide_zero=0{% endif %}">Margin</a></th>
+        <th><a class="{% if sort == 'name' %}on{% endif %}" href="?{{ range_query }}&amp;sort=name{% if not hide_free %}&amp;hide_free=0{% endif %}{% if not hide_zero %}&amp;hide_zero=0{% endif %}{% if not hide_inactive %}&amp;hide_inactive=0{% endif %}">Product</a></th>
+        <th class="num"><a class="{% if sort == 'orders' %}on{% endif %}" href="?{{ range_query }}&amp;sort=orders{% if not hide_free %}&amp;hide_free=0{% endif %}{% if not hide_zero %}&amp;hide_zero=0{% endif %}{% if not hide_inactive %}&amp;hide_inactive=0{% endif %}">Orders</a></th>
+        <th class="num"><a class="{% if sort == 'units' %}on{% endif %}" href="?{{ range_query }}&amp;sort=units{% if not hide_free %}&amp;hide_free=0{% endif %}{% if not hide_zero %}&amp;hide_zero=0{% endif %}{% if not hide_inactive %}&amp;hide_inactive=0{% endif %}">Units</a></th>
+        <th class="num"><a class="{% if sort == 'revenue' %}on{% endif %}" href="?{{ range_query }}&amp;sort=revenue{% if not hide_free %}&amp;hide_free=0{% endif %}{% if not hide_zero %}&amp;hide_zero=0{% endif %}{% if not hide_inactive %}&amp;hide_inactive=0{% endif %}">Net sales</a></th>
+        <th class="num"><a class="{% if sort == 'profit' %}on{% endif %}" href="?{{ range_query }}&amp;sort=profit{% if not hide_free %}&amp;hide_free=0{% endif %}{% if not hide_zero %}&amp;hide_zero=0{% endif %}{% if not hide_inactive %}&amp;hide_inactive=0{% endif %}">Profit</a></th>
+        <th class="num"><a class="{% if sort == 'margin' %}on{% endif %}" href="?{{ range_query }}&amp;sort=margin{% if not hide_free %}&amp;hide_free=0{% endif %}{% if not hide_zero %}&amp;hide_zero=0{% endif %}{% if not hide_inactive %}&amp;hide_inactive=0{% endif %}">Margin</a></th>
       </tr>
     </thead>
     <tbody>
@@ -54,6 +60,7 @@
             {% if row.product_id %}
               <a href="{% url 'web:product_detail' row.product_id %}?{{ range_query }}">{{ row.label }}</a>
             {% else %}{{ row.label }}{% endif %}
+            {% include "web/_catalog_status.html" with status=row.catalog_status %}
           </td>
           <td class="num">{{ row.orders|intcomma }}</td>
           <td class="num">{{ row.units|intcomma }}</td>

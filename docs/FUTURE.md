@@ -65,8 +65,9 @@ cost; do not expect Shipping −£ rows to pair with the original order.
 ### Bulk mapping and live listings only
 
 Same blank (AT002 / JH001) on every tee/hoodie. Confirm-all-of-this-blank
-would save clicks. Drafts/archived without sales are now hidden on Mapping;
-a true “live listings only” Shopify filter can wait.
+would save clicks. Mapping still lists archived products that sold, so a cost
+can be mapped. Products hides archived listings by default. Never-sold drafts
+stay off Mapping unless you ask.
 
 ### Manual cash match
 

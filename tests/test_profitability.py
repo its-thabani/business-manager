@@ -17,6 +17,7 @@ from apps.analytics.profitability import (
     Basis,
     CostResolver,
     all_product_performance,
+    attach_revenue_share,
     compute_order_profit,
     compute_order_profits,
     filter_product_rows,
@@ -805,6 +806,47 @@ def test_refund_rate_is_reported_per_product(
     assert performance.units == 4
     assert performance.refunded_units == Decimal("1")
     assert performance.refund_rate_pct == Decimal("25.00")
+
+
+def test_a_fully_refunded_mapped_product_is_a_loss_not_a_blank(
+    make_product, map_variant, make_order, refund_order
+):
+    """Refunded POD still cost the shirt. Profit and margin must stay visible."""
+    product = make_product(title="Returned tee", variants=[("Black", "L", "24.99")])
+    variant = product.variants.get()
+    map_variant(variant, cost="8.10")
+    order = make_order(lines=[(variant, 1, "24.99")], shipping_charged="0.00")
+    refund_order(order, amount="24.99")
+
+    performance = product_performance(compute_order_profits(), product)
+
+    assert performance.net_revenue == Decimal("0.00")
+    assert performance.refunds == Decimal("24.99")
+    assert not performance.is_free
+    assert performance.is_complete
+    assert performance.profit < Decimal("0.00")
+    assert performance.margin_pct is not None
+    assert performance.margin_pct < Decimal("0.00")
+    kept = filter_product_rows([performance], hide_free=True)
+    assert kept == [performance]
+
+
+def test_revenue_share_is_of_the_filtered_set(make_product, make_order):
+    hoodie = make_product(title="Hoodie", variants=[("Black", "L", "40.00")])
+    tee = make_product(title="Tee", variants=[("Black", "L", "10.00")])
+    make_order(lines=[(hoodie.variants.get(), 2, "40.00")], shipping_charged="0.00")
+    make_order(lines=[(tee.variants.get(), 2, "10.00")], shipping_charged="0.00")
+
+    rows = all_product_performance(compute_order_profits())
+    attach_revenue_share(rows)
+    by_name = {row.label: row.revenue_share_pct for row in rows}
+
+    assert by_name["Hoodie"] == Decimal("80.00")
+    assert by_name["Tee"] == Decimal("20.00")
+
+    tee_only = [row for row in rows if row.label == "Tee"]
+    attach_revenue_share(tee_only)
+    assert tee_only[0].revenue_share_pct == Decimal("100.00")
 
 
 # ---------------------------------------------------------------------------

@@ -12,6 +12,9 @@
     </div>
     <div class="period">
       {% if performance.margin_pct is not None %}{{ performance.margin_pct|floatformat:1 }}% margin{% endif %}
+      {% if performance.refunds %}
+        · refunds £{{ performance.refunds|floatformat:2 }} (print cost kept)
+      {% endif %}
       · <span class="pill good">complete</span>
       {% if vs_previous and vs_previous.profit_pct is not None %}
         · <span class="delta {% if vs_previous.profit_pct < 0 %}neg{% else %}pos{% endif %}">{{ vs_previous.profit_pct|floatformat:0 }}% vs previous</span>

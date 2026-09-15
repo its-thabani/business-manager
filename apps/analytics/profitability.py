@@ -197,9 +197,15 @@ class LineProfit:
         return None if total is None else quantise(self.net_revenue - total)
 
     @property
+    def sales_for_margin(self) -> Decimal:
+        if self.net_revenue == ZERO and self.refunded_amount:
+            return self.refunded_amount
+        return self.net_revenue
+
+    @property
     def margin_pct(self) -> Decimal | None:
         profit = self.contribution_profit
-        return None if profit is None else margin_pct(profit, self.net_revenue)
+        return None if profit is None else margin_pct(profit, self.sales_for_margin)
 
     @property
     def cost_is_known(self) -> bool:
@@ -600,6 +606,8 @@ class Performance:
     date_range: DateRange | None = None
     product_id: int | None = None
     group_id: int | None = None
+    catalog_status: str = ""
+    revenue_share_pct: Decimal | None = None
 
     orders: int = 0
     units: int = 0
@@ -625,12 +633,24 @@ class Performance:
         return quantise(self.supplier_cost + self.shipping_cost + self.payment_fees)
 
     @property
+    def sales_for_margin(self) -> Decimal:
+        """Revenue used for the margin %.
+
+        A fully refunded product has £0 net sales, but the original ticket is
+        still the right denominator — otherwise margin becomes a blank and the
+        print cost looks like it vanished.
+        """
+        if self.net_revenue == ZERO and self.refunds:
+            return self.refunds
+        return self.net_revenue
+
+    @property
     def profit(self) -> Decimal:
         return quantise(self.net_revenue - self.total_cost)
 
     @property
     def margin_pct(self) -> Decimal | None:
-        return margin_pct(self.profit, self.net_revenue)
+        return margin_pct(self.profit, self.sales_for_margin)
 
     @property
     def known_margin_pct(self) -> Decimal | None:
@@ -707,8 +727,17 @@ class Performance:
 
     @property
     def is_free(self) -> bool:
-        """Sold, but Shopify recorded £0 — usually a digital lead magnet."""
-        return self.orders > 0 and self.net_revenue == ZERO
+        """Sold, but Shopify recorded £0 — usually a digital lead magnet.
+
+        A fully refunded paid order also nets to £0. That is a loss (the print
+        was already done), not a free download.
+        """
+        return (
+            self.orders > 0
+            and self.net_revenue == ZERO
+            and self.refunds == ZERO
+            and self.gross_revenue == ZERO
+        )
 
     @property
     def completeness_pct(self) -> Decimal | None:
@@ -872,6 +901,8 @@ def rank_products(
         return sorted(rows, key=lambda row: -row.orders)
     if sort == "revenue":
         return sorted(rows, key=lambda row: -row.net_revenue)
+    if sort == "share":
+        return sorted(rows, key=lambda row: -(row.revenue_share_pct or ZERO))
     if sort == "profit":
         if use_estimate:
             return sorted(
@@ -903,6 +934,7 @@ def filter_product_rows(
     *,
     hide_free: bool = False,
     hide_zero_orders: bool = False,
+    hide_inactive: bool = False,
 ) -> list[Performance]:
     """Apply table filters without changing the underlying profit figures."""
     out = rows
@@ -910,7 +942,26 @@ def filter_product_rows(
         out = [row for row in out if row.orders > 0]
     if hide_free:
         out = [row for row in out if not row.is_free]
+    if hide_inactive:
+        out = [
+            row
+            for row in out
+            if row.catalog_status not in {"archived", "draft"}
+        ]
     return out
+
+
+def attach_revenue_share(rows: list[Performance]) -> Decimal:
+    """Stamp each row with its % of the rows' combined net sales.
+
+    The denominator is the filtered set, so Year to date, live-only, and
+    hide-free all change the total the percentage is of.
+    """
+    total = sum((row.net_revenue for row in rows), ZERO)
+    for row in rows:
+        share = safe_divide(row.net_revenue, total)
+        row.revenue_share_pct = quantise(share * 100) if share is not None else None
+    return total
 
 
 def trading_by_month(

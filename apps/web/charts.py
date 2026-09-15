@@ -93,3 +93,34 @@ def share_bars(rows: list[dict], *, value_key: str = "units", limit: int = 10) -
         item["bar_pct"] = float(value / peak * 100)
         out.append(item)
     return out
+
+
+def pie_slices(
+    rows: list[dict],
+    *,
+    value_key: str = "revenue",
+    colour_key: str = "colour",
+) -> list[dict]:
+    """Conic-gradient stops: each slice is a share of the sum of values."""
+    total = sum((Decimal(row.get(value_key) or 0) for row in rows), ZERO)
+    if total <= 0:
+        return []
+    cursor = ZERO
+    out = []
+    for row in rows:
+        value = Decimal(row.get(value_key) or 0)
+        if value <= 0:
+            continue
+        share = value / total * 100
+        start = cursor
+        cursor += share
+        item = dict(row)
+        item["value"] = value
+        item["share_pct"] = float(share)
+        item["start_pct"] = float(start)
+        item["end_pct"] = float(cursor)
+        item["colour"] = row.get(colour_key) or "#94a3b8"
+        out.append(item)
+    if out:
+        out[-1]["end_pct"] = 100.0
+    return out

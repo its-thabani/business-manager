@@ -35,7 +35,10 @@
   <p class="period muted">
     A red (negative) profit usually means refunds or exchanges: the customer was
     paid back, but the garment was already printed so the cost stays.
-    Profit is net of VAT on the sale; printer VAT is not in the cost yet.
+    A <strong>—</strong> with <em>add cost</em> means that product has no printer
+    cost yet — not that it was refunded. Open the product, then Mapping.
+    Archived Shopify listings are hidden; they still count in shop totals if they
+    sold in this window.
   </p>
 
   <div class="charts two">
@@ -94,25 +97,32 @@
 
   <h2>Products that sold</h2>
   <nav class="chips" aria-label="Table filters">
-    <a class="{% if hide_free %}on{% endif %}" href="?{{ range_query }}&amp;sort={{ sort }}{% if not hide_zero %}&amp;hide_zero=0{% endif %}{% if hide_free %}&amp;hide_free=0{% endif %}">
+    <a class="{% if hide_free %}on{% endif %}" href="?{{ range_query }}&amp;sort={{ sort }}{% if not hide_zero %}&amp;hide_zero=0{% endif %}{% if not hide_inactive %}&amp;hide_inactive=0{% endif %}{% if hide_free %}&amp;hide_free=0{% endif %}">
       {% if hide_free %}Showing paid only{% else %}Include £0 / free downloads{% endif %}
     </a>
-    <a class="{% if hide_zero %}on{% endif %}" href="?{{ range_query }}&amp;sort={{ sort }}{% if not hide_free %}&amp;hide_free=0{% endif %}{% if hide_zero %}&amp;hide_zero=0{% endif %}">
+    <a class="{% if hide_zero %}on{% endif %}" href="?{{ range_query }}&amp;sort={{ sort }}{% if not hide_free %}&amp;hide_free=0{% endif %}{% if not hide_inactive %}&amp;hide_inactive=0{% endif %}{% if hide_zero %}&amp;hide_zero=0{% endif %}">
       {% if hide_zero %}Hiding 0-order products{% else %}Include products with 0 orders{% endif %}
+    </a>
+    <a class="{% if hide_inactive %}on{% endif %}" href="?{{ range_query }}&amp;sort={{ sort }}{% if not hide_free %}&amp;hide_free=0{% endif %}{% if not hide_zero %}&amp;hide_zero=0{% endif %}{% if hide_inactive %}&amp;hide_inactive=0{% endif %}">
+      {% if hide_inactive %}Live listings only{% else %}Including archived{% endif %}
     </a>
   </nav>
   {% if hide_free and free_count %}
     <p class="period muted">{{ free_count }} free digital product{{ free_count|pluralize }} hidden. They have units but £0 sales because Shopify charged nothing.</p>
   {% endif %}
+  {% if hide_inactive and inactive_count %}
+    <p class="period muted">{{ inactive_count }} archived or draft listing{{ inactive_count|pluralize }} hidden. Shopify still has them for old orders; they are not live.</p>
+  {% endif %}
   <table>
     <thead>
       <tr>
-        <th><a class="{% if sort == 'name' %}on{% endif %}" href="?{{ range_query }}&amp;sort=name{% if not hide_free %}&amp;hide_free=0{% endif %}{% if not hide_zero %}&amp;hide_zero=0{% endif %}">Product</a></th>
-        <th class="num"><a class="{% if sort == 'orders' %}on{% endif %}" href="?{{ range_query }}&amp;sort=orders{% if not hide_free %}&amp;hide_free=0{% endif %}{% if not hide_zero %}&amp;hide_zero=0{% endif %}">Orders</a></th>
-        <th class="num"><a class="{% if sort == 'units' %}on{% endif %}" href="?{{ range_query }}&amp;sort=units{% if not hide_free %}&amp;hide_free=0{% endif %}{% if not hide_zero %}&amp;hide_zero=0{% endif %}">Units</a></th>
-        <th class="num"><a class="{% if sort == 'revenue' %}on{% endif %}" href="?{{ range_query }}&amp;sort=revenue{% if not hide_free %}&amp;hide_free=0{% endif %}{% if not hide_zero %}&amp;hide_zero=0{% endif %}">Net sales</a></th>
-        <th class="num"><a class="{% if sort == 'profit' %}on{% endif %}" href="?{{ range_query }}&amp;sort=profit{% if not hide_free %}&amp;hide_free=0{% endif %}{% if not hide_zero %}&amp;hide_zero=0{% endif %}">Profit</a></th>
-        <th class="num"><a class="{% if sort == 'margin' %}on{% endif %}" href="?{{ range_query }}&amp;sort=margin{% if not hide_free %}&amp;hide_free=0{% endif %}{% if not hide_zero %}&amp;hide_zero=0{% endif %}">Margin</a></th>
+        <th><a class="{% if sort == 'name' %}on{% endif %}" href="?{{ range_query }}&amp;sort=name{% if not hide_free %}&amp;hide_free=0{% endif %}{% if not hide_zero %}&amp;hide_zero=0{% endif %}{% if not hide_inactive %}&amp;hide_inactive=0{% endif %}">Product</a></th>
+        <th class="num"><a class="{% if sort == 'orders' %}on{% endif %}" href="?{{ range_query }}&amp;sort=orders{% if not hide_free %}&amp;hide_free=0{% endif %}{% if not hide_zero %}&amp;hide_zero=0{% endif %}{% if not hide_inactive %}&amp;hide_inactive=0{% endif %}">Orders</a></th>
+        <th class="num"><a class="{% if sort == 'units' %}on{% endif %}" href="?{{ range_query }}&amp;sort=units{% if not hide_free %}&amp;hide_free=0{% endif %}{% if not hide_zero %}&amp;hide_zero=0{% endif %}{% if not hide_inactive %}&amp;hide_inactive=0{% endif %}">Units</a></th>
+        <th class="num"><a class="{% if sort == 'revenue' %}on{% endif %}" href="?{{ range_query }}&amp;sort=revenue{% if not hide_free %}&amp;hide_free=0{% endif %}{% if not hide_zero %}&amp;hide_zero=0{% endif %}{% if not hide_inactive %}&amp;hide_inactive=0{% endif %}">Net sales</a></th>
+        <th class="num"><a class="{% if sort == 'share' %}on{% endif %}" href="?{{ range_query }}&amp;sort=share{% if not hide_free %}&amp;hide_free=0{% endif %}{% if not hide_zero %}&amp;hide_zero=0{% endif %}{% if not hide_inactive %}&amp;hide_inactive=0{% endif %}" title="Share of net sales in this window, after the filters on this table">Share</a></th>
+        <th class="num"><a class="{% if sort == 'profit' %}on{% endif %}" href="?{{ range_query }}&amp;sort=profit{% if not hide_free %}&amp;hide_free=0{% endif %}{% if not hide_zero %}&amp;hide_zero=0{% endif %}{% if not hide_inactive %}&amp;hide_inactive=0{% endif %}">Profit</a></th>
+        <th class="num"><a class="{% if sort == 'margin' %}on{% endif %}" href="?{{ range_query }}&amp;sort=margin{% if not hide_free %}&amp;hide_free=0{% endif %}{% if not hide_zero %}&amp;hide_zero=0{% endif %}{% if not hide_inactive %}&amp;hide_inactive=0{% endif %}">Margin</a></th>
         <th>Cost</th>
       </tr>
     </thead>
@@ -124,10 +134,13 @@
               <a href="{% url 'web:product_detail' row.product_id %}?{{ range_query }}">{{ row.label }}</a>
             {% else %}{{ row.label }}{% endif %}
             {% if row.is_free %}<span class="pill">free</span>{% endif %}
+            {% if row.refunds %}<span class="pill warn">refunds</span>{% endif %}
+            {% include "web/_catalog_status.html" with status=row.catalog_status %}
           </td>
           <td class="num">{{ row.orders|intcomma }}</td>
           <td class="num">{{ row.units|intcomma }}</td>
           <td class="num">{% if row.is_free %}£0.00{% else %}£{{ row.net_revenue|floatformat:2 }}{% endif %}</td>
+          <td class="num">{% if row.revenue_share_pct is not None %}{{ row.revenue_share_pct|floatformat:1 }}%{% else %}—{% endif %}</td>
           <td class="num">
             {% if row.is_free %}
               <span class="muted">£0.00</span>
@@ -147,7 +160,7 @@
           </td>
         </tr>
       {% empty %}
-        <tr><td colspan="7" class="muted">No products match these filters. Sync Shopify orders first, or show free / zero-order rows.</td></tr>
+        <tr><td colspan="8" class="muted">No products match these filters. Sync Shopify orders first, or show free / zero-order rows.</td></tr>
       {% endfor %}
     </tbody>
   </table>

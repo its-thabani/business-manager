@@ -51,6 +51,7 @@ from apps.analytics.profitability import (
     Performance,
     all_group_performance,
     all_product_performance,
+    attach_revenue_share,
     compare_performance,
     compute_order_profit,
     compute_order_profits,
@@ -63,7 +64,7 @@ from apps.analytics.profitability import (
     trading_by_month,
     variant_performance,
 )
-from apps.catalog.models import Product, ProductGroup
+from apps.catalog.models import Product, ProductGroup, ProductStatus
 from apps.core.money import ZERO, fmt
 from apps.core.periods import PRESETS, requested_range
 from apps.finance.categorisation import categorise
@@ -88,7 +89,7 @@ from apps.web.bootstrap import ensure_operator_user
 from apps.web.exports import csv_response, money_cell, wants_csv
 from apps.sales.models import Customer, Order
 from apps.supplier.models import ProductMapping, SupplierOrder, SupplierProduct, VariantMapping
-from apps.web.charts import column_chart, line_chart, share_bars
+from apps.web.charts import column_chart, line_chart, pie_slices, share_bars
 
 
 def healthz(request):
@@ -554,10 +555,11 @@ def products(request):
     """Which products sold, and whether they actually made money."""
     date_range, preset = _requested_range(request)
     sort = request.GET.get("sort", "units")
-    if sort not in {"name", "units", "orders", "revenue", "profit", "margin"}:
+    if sort not in {"name", "units", "orders", "revenue", "share", "profit", "margin"}:
         sort = "units"
     hide_free = _flag(request, "hide_free", default=True)
     hide_zero = _flag(request, "hide_zero", default=True)
+    hide_inactive = _flag(request, "hide_inactive", default=True)
 
     profits = compute_order_profits(date_range)
     shop = summarise(profits, label="Shop", date_range=date_range)
@@ -565,14 +567,28 @@ def products(request):
     if not hide_zero:
         sold_ids = {row.product_id for row in sold if row.product_id}
         sold.extend(
-            Performance(label=product.title, product_id=product.pk, date_range=date_range)
-            for product in Product.objects.exclude(pk__in=sold_ids).only("id", "title")
+            Performance(
+                label=product.title,
+                product_id=product.pk,
+                date_range=date_range,
+                catalog_status=product.status,
+            )
+            for product in Product.objects.exclude(pk__in=sold_ids).only("id", "title", "status")
         )
-    ranked = filter_product_rows(
-        rank_products(sold, sort=sort),
+    _stamp_catalog_status(sold)
+    ranked_all = filter_product_rows(
+        sold,
         hide_free=hide_free,
         hide_zero_orders=hide_zero,
     )
+    inactive_count = sum(
+        1
+        for row in ranked_all
+        if row.catalog_status in {ProductStatus.ARCHIVED, ProductStatus.DRAFT}
+    )
+    visible = filter_product_rows(ranked_all, hide_inactive=hide_inactive)
+    attach_revenue_share(visible)
+    ranked = rank_products(visible, sort=sort)
     months = column_chart(
         [
             {"label": row.label, "revenue": row.net_revenue, "profit": row.profit, "units": row.units}
@@ -599,6 +615,8 @@ def products(request):
         extras += "&hide_free=0"
     if not hide_zero:
         extras += "&hide_zero=0"
+    if not hide_inactive:
+        extras += "&hide_inactive=0"
     if wants_csv(request):
         return csv_response(
             "products.csv",
@@ -607,6 +625,7 @@ def products(request):
                 "Orders",
                 "Units",
                 "Net sales",
+                "Share of sales %",
                 "Profit",
                 "Margin %",
                 "Basis",
@@ -618,6 +637,7 @@ def products(request):
                     row.orders,
                     row.units,
                     money_cell(row.net_revenue),
+                    row.revenue_share_pct,
                     money_cell(row.profit) if row.is_complete else "",
                     row.margin_pct if row.is_complete else "",
                     row.profit_basis,
@@ -637,6 +657,8 @@ def products(request):
             "sort": sort,
             "hide_free": hide_free,
             "hide_zero": hide_zero,
+            "hide_inactive": hide_inactive,
+            "inactive_count": inactive_count,
             "shop": shop,
             "products": ranked,
             "months": months,
@@ -711,11 +733,25 @@ def groups(request):
         date_range=date_range,
     )
     members = {group.pk: group.products.count() for group in ProductGroup.objects.all()}
+    colours = {group.pk: group.colour for group in ProductGroup.objects.all()}
     for row in group_rows:
         row.members = members.get(row.group_id, 0)
+        row.colour = colours.get(row.group_id, "#94a3b8")
     ranked = rank_products(group_rows, sort=sort, use_estimate=True)
     if hide_free:
         ranked = [row for row in ranked if not row.is_free]
+    pie = pie_slices(
+        [
+            {
+                "label": row.label,
+                "revenue": row.net_revenue,
+                "colour": getattr(row, "colour", "#94a3b8"),
+                "group_id": row.group_id,
+            }
+            for row in ranked
+        ],
+        value_key="revenue",
+    )
     extras = f"sort={sort}"
     if not hide_free:
         extras += "&hide_free=0"
@@ -747,6 +783,7 @@ def groups(request):
             "sort": sort,
             "hide_free": hide_free,
             "groups": ranked,
+            "pie": pie,
             "ungrouped": ungrouped_products().count(),
             "extra_query": extras,
         },
@@ -762,6 +799,7 @@ def group_detail(request, pk: int):
         sort = "units"
     hide_free = _flag(request, "hide_free", default=True)
     hide_zero = _flag(request, "hide_zero", default=True)
+    hide_inactive = _flag(request, "hide_inactive", default=True)
 
     profits = compute_order_profits(date_range)
     performance = group_performance(profits, group, date_range=date_range)
@@ -774,19 +812,33 @@ def group_detail(request, pk: int):
     if not hide_zero:
         sold_ids = {row.product_id for row in sold if row.product_id}
         sold.extend(
-            Performance(label=product.title, product_id=product.pk, date_range=date_range)
-            for product in group.products.exclude(pk__in=sold_ids).only("id", "title")
+            Performance(
+                label=product.title,
+                product_id=product.pk,
+                date_range=date_range,
+                catalog_status=product.status,
+            )
+            for product in group.products.exclude(pk__in=sold_ids).only("id", "title", "status")
         )
-    ranked = filter_product_rows(
+    _stamp_catalog_status(sold)
+    ranked_all = filter_product_rows(
         rank_products(sold, sort=sort),
         hide_free=hide_free,
         hide_zero_orders=hide_zero,
     )
+    inactive_count = sum(
+        1
+        for row in ranked_all
+        if row.catalog_status in {ProductStatus.ARCHIVED, ProductStatus.DRAFT}
+    )
+    ranked = filter_product_rows(ranked_all, hide_inactive=hide_inactive)
     extras = f"sort={sort}"
     if not hide_free:
         extras += "&hide_free=0"
     if not hide_zero:
         extras += "&hide_zero=0"
+    if not hide_inactive:
+        extras += "&hide_inactive=0"
     return render(
         request,
         "web/group_detail.html",
@@ -799,6 +851,8 @@ def group_detail(request, pk: int):
             "sort": sort,
             "hide_free": hide_free,
             "hide_zero": hide_zero,
+            "hide_inactive": hide_inactive,
+            "inactive_count": inactive_count,
             "performance": performance,
             "products": ranked,
             "extra_query": extras,
@@ -821,6 +875,16 @@ def _flag(request, name: str, *, default: bool = True) -> bool:
     if raw is None:
         return default
     return raw not in {"0", "false", "off", ""}
+
+
+def _stamp_catalog_status(rows: list[Performance]) -> None:
+    """Copy Shopify listing status onto performance rows for live/archived filters."""
+    ids = [row.product_id for row in rows if row.product_id]
+    if not ids:
+        return
+    statuses = dict(Product.objects.filter(pk__in=ids).values_list("pk", "status"))
+    for row in rows:
+        row.catalog_status = statuses.get(row.product_id, "")
 
 
 def customers(request):

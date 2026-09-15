@@ -366,6 +366,20 @@ def test_mapping_page_hides_unsold_drafts_by_default(client):
     assert b"Old draft listing" in shown.content
 
 
+def test_mapping_page_still_lists_archived_products_that_sold(client, make_order):
+    from apps.catalog.models import ProductStatus
+
+    product = _shop_product("Old colourway hoodie", [("JH001-FOR-L", "Forest", "L", "34.99")])
+    product.status = ProductStatus.ARCHIVED
+    product.save(update_fields=["status"])
+    make_order(lines=[(product.variants.get(), 2, "34.99")])
+
+    listing = client.get("/mapping/?filter=all")
+
+    assert b"Old colourway hoodie" in listing.content
+    assert b"archived" in listing.content
+
+
 def test_mapping_page_can_mark_a_product_digital(client):
     product = _shop_product("Verse card", [("", "", "", "3.00")], product_type="Digital")
 

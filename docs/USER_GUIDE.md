@@ -263,12 +263,12 @@ There is no overnight job and no extra refresh button. After you import a bank f
 **What you see**
 
 - Shop totals: units, net sales, contribution profit, cost coverage.
-- A table of products (sortable).
-- Free £0 downloads and products with no orders hidden by default (toggles at the top).
+- A table of products (sortable), including each row’s share of net sales in the selected window.
+- Free £0 downloads, archived listings, and products with no orders hidden by default (toggles at the top). The share % is of the rows still shown.
 
 **What you can do**
 
-- Change dates; sort by name, units, orders, revenue, profit or margin.
+- Change dates; sort by name, units, orders, revenue, share, profit or margin.
 - Open a product for the detail page.
 - Download the table.
 
@@ -280,9 +280,7 @@ There is no overnight job and no extra refresh button. After you import a bank f
 
 A **green or red** profit with a complete pill is the real total — every sold line has a cost. A **~** figure labelled **approx.** (dashed card) is the margin of the items that already have a cost, applied to the rest. That is not the books.
 
-A product or variant still showing **—** has no cost of its own. Click **add cost** to open Mapping for that product. Do not read a group approximation as that line’s profit.
-
-A **red / negative** profit is usually a refund or exchange: the customer was paid back, but the print was already done so the cost stays. That is intentional.
+A **red / negative** profit is usually a refund or exchange: the customer was paid back, but the print was already done so the cost stays. A **—** with **add cost** means there is still no printer cost for that product. Click it and map the blank. Do not read a group approximation as that line’s profit.
 
 Profit uses **net** printer prices (what Inkthreadable charged before VAT) and **excludes** VAT the customer paid at checkout. Your own pricing (garment + shipping + tax, single vs double sided) will therefore look more expensive than the app’s cost. Double-sided and neck-label extras are included only when that job’s invoice (or mapped SKU) includes them.
 
@@ -319,6 +317,7 @@ To replace an approximation with a real total: map the variant on **Mapping**, r
 **What you see**
 
 - The same style of totals as Products, per group.
+- A pie of net sales by group for the selected dates.
 - A table of groups; **Products** is how many Shopify listings sit in that group. Click through for the products in the group.
 - **~ approx.** profit / margin when only some items in the group have a printer cost. Complete groups stay green or red.
 
@@ -510,7 +509,7 @@ Do not map those tees onto a hoodie or a Stanley/Stella Rocker just because that
 
 **What you can do**
 
-- Filter: needs review / all / digital / confirmed. Draft and archived listings are hidden unless they have sales.
+- Filter: needs review / all / digital / confirmed. Never-sold drafts and archived leftovers stay hidden. Archived products that sold stay on the list (labelled archived) so a cost can still be mapped. Use **Show drafts & archived** for the rest.
 - **Suggest mappings** (safe to re-run; confirmed matches stay).
 - Open a product to confirm a suggested blank, pick a blank, mark **digital / no supplier**, or leave it unmapped. The same blank (AT002, JH001) can be reused on every tee / hoodie / sweatshirt.
 - Map individual variants when sizes or single vs double sided differ.

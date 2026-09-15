@@ -24,6 +24,27 @@
     Green or red with no label is complete.
   </p>
 
+  {% if pie %}
+    <div class="chart">
+      <div class="label">Share of net sales</div>
+      <div class="pie-wrap">
+        <div class="pie" style="background: conic-gradient({% for slice in pie %}{{ slice.colour }} {{ slice.start_pct }}% {{ slice.end_pct }}%{% if not forloop.last %}, {% endif %}{% endfor %})" role="img" aria-label="Net sales by group in this period"></div>
+        <ul class="pie-legend">
+          {% for slice in pie %}
+            <li>
+              <i class="swatch" style="background:{{ slice.colour }}"></i>
+              {% if slice.group_id %}
+                <a href="{% url 'web:group_detail' slice.group_id %}?{{ range_query }}">{{ slice.label }}</a>
+              {% else %}{{ slice.label }}{% endif %}
+              <span class="n">{{ slice.share_pct|floatformat:1 }}%</span>
+            </li>
+          {% endfor %}
+        </ul>
+      </div>
+      <p class="period muted">Follows the date range above. A product in two groups is counted in both, so this is the mix of group totals, not a split of shop sales into one bucket each.</p>
+    </div>
+  {% endif %}
+
   <table>
     <thead>
       <tr>
