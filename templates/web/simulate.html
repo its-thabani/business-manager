@@ -8,6 +8,112 @@
 {% block content %}
   {% include "web/_period.html" %}
 
+  <h2>Price a new product</h2>
+  <p class="muted">
+    For something that has not sold yet, such as a jacket. Type Inkthreadable’s
+    quote <strong>before VAT</strong>. The price below puts product, postage and
+    VAT inside the selling price, then adds your markup, so free shipping does
+    not eat the margin. Nothing here is saved.
+  </p>
+  <form method="get" class="card" style="margin-top:1rem">
+    <input type="hidden" name="quote" value="1">
+    {% if selected_preset == "custom" %}
+      <input type="hidden" name="start" value="{{ date_range.start|date:'Y-m-d' }}">
+      <input type="hidden" name="end" value="{{ date_range.end|date:'Y-m-d' }}">
+    {% else %}
+      <input type="hidden" name="range" value="{{ selected_preset }}">
+    {% endif %}
+    <div class="sim-grid">
+      <div>
+        <label for="quote_name">Name</label>
+        <input type="text" name="quote_name" id="quote_name" value="{{ quote_name }}" placeholder="e.g. Jacket">
+      </div>
+      <div>
+        <label for="printer_product">Printer product (£, before VAT)</label>
+        <input type="number" step="0.01" name="printer_product" id="printer_product" value="{{ printer_product }}" placeholder="e.g. 18.50" required>
+      </div>
+      <div>
+        <label for="printer_postage">Printer postage (£, before VAT)</label>
+        <input type="number" step="0.01" name="printer_postage" id="printer_postage" value="{{ printer_postage }}" placeholder="e.g. 3.15" required>
+      </div>
+      <div>
+        <label for="markup">Markup (%)</label>
+        <input type="number" step="1" name="markup" id="markup" value="{{ markup }}">
+      </div>
+      <div>
+        <label for="customer_postage">Postage you might charge instead (£)</label>
+        <input type="number" step="0.01" name="customer_postage" id="customer_postage" value="{{ customer_postage }}">
+      </div>
+    </div>
+    <button class="btn btn-primary" type="submit">Work out a price</button>
+  </form>
+
+  {% if quote_error %}
+    <div class="note">{{ quote_error }}</div>
+  {% endif %}
+  {% if quote %}
+    <div class="cards">
+      <div class="card">
+        <div class="label">Sell {{ quote.name }} for</div>
+        <div class="value">£{{ quote.recommended.shelf_price|floatformat:2 }}</div>
+        <div class="period">free shipping · {{ quote.markup_pct|floatformat:0 }}% markup</div>
+      </div>
+      <div class="card">
+        <div class="label">You pay Inkthreadable</div>
+        <div class="value">£{{ quote.landed|floatformat:2 }}</div>
+        <div class="period">£{{ quote.product_net|floatformat:2 }} + £{{ quote.postage_net|floatformat:2 }} postage + £{{ quote.vat|floatformat:2 }} VAT</div>
+      </div>
+      <div class="card">
+        <div class="label">You keep, after the card fee</div>
+        <div class="value">£{{ quote.recommended.kept|floatformat:2 }}</div>
+        <div class="period">
+          {% if quote.recommended.margin_pct is not None %}{{ quote.recommended.margin_pct|floatformat:1 }}% of the selling price{% endif %}
+          · card fee about £{{ quote.recommended.card_fee|floatformat:2 }}
+        </div>
+      </div>
+    </div>
+    <p class="muted">
+      {{ quote.markup_pct|floatformat:0 }}% markup means the price is that far above
+      the Inkthreadable bill, not that you keep {{ quote.markup_pct|floatformat:0 }}% of
+      what the customer pays. The exact figure before rounding to .99 is
+      £{{ quote.recommended.exact_price|floatformat:2 }}.
+      {% if quote.recommended.garment_if_postage_charged is not None %}
+        If the customer paid £{{ quote.customer_postage|floatformat:2 }} postage instead,
+        the garment could show as £{{ quote.recommended.garment_if_postage_charged|floatformat:2 }}
+        and you would keep the same amount.
+        Pricing it at £{{ quote.recommended.garment_if_postage_charged|floatformat:2 }}
+        <em>and</em> making postage free would leave you
+        £{{ quote.recommended.kept_if_priced_low_and_free|floatformat:2 }} — the postage has to stay inside the price.
+      {% endif %}
+    </p>
+    {% if quote_note %}<div class="note">{{ quote_note }}</div>{% endif %}
+    <h2>Price range</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Markup</th>
+          <th class="num">Free-shipping price</th>
+          <th class="num">You keep</th>
+          <th class="num">Share of the price</th>
+          <th class="num">Garment if postage is extra</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in quote.rows %}
+          <tr{% if row.markup_pct == quote.markup_pct %} class="total"{% endif %}>
+            <td>{{ row.markup_pct|floatformat:0 }}%</td>
+            <td class="num">£{{ row.shelf_price|floatformat:2 }}</td>
+            <td class="num">£{{ row.kept|floatformat:2 }}</td>
+            <td class="num">{% if row.margin_pct is not None %}{{ row.margin_pct|floatformat:1 }}%{% else %}—{% endif %}</td>
+            <td class="num">{% if row.garment_if_postage_charged is not None %}£{{ row.garment_if_postage_charged|floatformat:2 }}{% else %}—{% endif %}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% endif %}
+
+  <h2>Replay orders you already have</h2>
+
   <p class="muted" style="margin-top:1rem">
     This does not change real books. It replays the orders already in the dates
     you picked. Fill <strong>only the boxes for the change you want</strong>;

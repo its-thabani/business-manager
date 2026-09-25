@@ -116,6 +116,19 @@ def test_simulate_page_renders(client, make_product, map_variant, make_order):
     assert b"Printer VAT" in response.content
 
 
+def test_new_product_quote_is_on_the_simulate_page(client):
+    response = client.get(
+        "/simulate/?range=all&quote=1&quote_name=Jacket&printer_product=18.50&printer_postage=3.15&markup=40&customer_postage=4.99"
+    )
+
+    assert response.status_code == 200
+    html = response.content.decode()
+    assert "Sell Jacket for" in html
+    assert "You pay Inkthreadable" in html
+    assert "free shipping" in html
+    assert "Price range" in html
+
+
 def test_line_chart_places_a_higher_point_higher_on_the_page():
     chart = line_chart(
         [

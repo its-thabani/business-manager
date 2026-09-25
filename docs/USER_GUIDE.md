@@ -474,8 +474,15 @@ Leave every box blank except the one change you care about.
 - Whether a £2 price rise covers a dearer blank.
 - What free postage would have done to last month’s real orders.
 - How much volume you would need to break even on a postage change.
+- Bookmark the URL to keep a scenario. Nothing is saved into the books.
 
-Bookmark the URL to keep a scenario. Nothing is saved into the books.
+**Price a new product** (top of the same page) is for a garment that has not sold yet, such as a jacket.
+
+- Type Inkthreadable’s product price and postage **before VAT**, and a markup (40% is the usual starting point).
+- **Work out a price**. The figure is product + postage + VAT, marked up, rounded up to a .99 price, with postage already inside it so free shipping does not reduce what you keep.
+- The range shows 10 points under and over that markup.
+- “Garment if postage is extra” is the lower sticker price if the customer pays postage separately. Using that lower price *and* free shipping drops the margin.
+- It is compared with what hoodies already sell for, so a price that has run away from the rest of the range is obvious.
 
 ---
 
