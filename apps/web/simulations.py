@@ -5,7 +5,7 @@ from __future__ import annotations
 from decimal import Decimal
 
 from django.db.models import F, Sum
-from django.shortcuts import render
+from django.shortcuts import redirect, render
 
 from apps.analytics.pricing import quote_new_product
 from apps.analytics.profitability import compute_order_profits
@@ -25,7 +25,7 @@ def _money(value: str | None) -> Decimal | None:
 
 
 def _new_product_quote(params):
-    if params.get("quote") != "1":
+    if not params.get("printer_product") and not params.get("printer_postage"):
         return None, ""
     try:
         product_net = _money(params.get("printer_product"))
@@ -63,6 +63,8 @@ def _hoodie_average_price() -> Decimal | None:
 
 
 def simulate_view(request):
+    if request.GET.get("quote") == "1":
+        return redirect("web:price")
     date_range, preset = _requested_range(request)
     spec = spec_from_query(request.GET)
     profits = compute_order_profits(date_range)
@@ -75,25 +77,6 @@ def simulate_view(request):
         else:
             label = product.title
 
-    quote, quote_error = _new_product_quote(request.GET)
-    hoodie_price = _hoodie_average_price() if quote else None
-    quote_note = ""
-    if quote and hoodie_price is not None:
-        gap = quote.recommended.shelf_price - hoodie_price
-        if gap > Decimal("8"):
-            quote_note = (
-                f"Hoodies you already sell average about £{hoodie_price}. "
-                f"£{quote.recommended.shelf_price} is £{gap} more, so the jacket is only "
-                f"worth releasing if people will pay that."
-            )
-        elif gap > Decimal("2"):
-            quote_note = (
-                f"A little above the hoodies you already sell (about £{hoodie_price})."
-            )
-        else:
-            quote_note = (
-                f"In the same band as the hoodies you already sell (about £{hoodie_price})."
-            )
     result = simulate(profits, spec, date_range=date_range, label=label)
     comparison = column_chart(
         [
@@ -137,9 +120,38 @@ def simulate_view(request):
             "product": product,
             "products": products,
             "comparison": comparison,
+        },
+    )
+
+
+def price_view(request):
+    quote, quote_error = _new_product_quote(request.GET)
+    hoodie_price = _hoodie_average_price() if quote else None
+    quote_note = ""
+    if quote and hoodie_price is not None:
+        gap = quote.recommended.shelf_price - hoodie_price
+        if gap > Decimal("8"):
+            quote_note = (
+                f"Hoodies you already sell average about £{hoodie_price}. "
+                f"£{quote.recommended.shelf_price} is £{gap} more, so the jacket is only "
+                f"worth releasing if people will pay that."
+            )
+        elif gap > Decimal("2"):
+            quote_note = (
+                f"A little above the hoodies you already sell (about £{hoodie_price})."
+            )
+        else:
+            quote_note = (
+                f"In the same band as the hoodies you already sell (about £{hoodie_price})."
+            )
+    return render(
+        request,
+        "web/price.html",
+        {
+            "nav": "price",
+            "section": "insights",
             "quote": quote,
             "quote_error": quote_error,
-            "hoodie_price": hoodie_price,
             "quote_note": quote_note,
             "quote_name": request.GET.get("quote_name", ""),
             "printer_product": request.GET.get("printer_product", ""),

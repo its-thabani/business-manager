@@ -28,6 +28,7 @@ urlpatterns = [
     path("categories/", categories.category_rules, name="category_rules"),
     path("categories/rules/<int:pk>/", categories.category_rule_edit, name="category_rule_edit"),
     path("simulate/", simulations.simulate_view, name="simulate"),
+    path("price/", simulations.price_view, name="price"),
     path("guide/", views.guide, name="guide"),
     path("healthz", views.healthz, name="healthz"),
 ]

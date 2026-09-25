@@ -27,6 +27,7 @@ Stages 1 and 2 are in place. Later stages are listed in [Roadmap](#roadmap).
 | Product, order, group, customer, shipping, discount and refund analytics | Done |
 | Reconciliation | Done — Shopify days → Stripe/Adyen, invoices → Inkthreadable |
 | Simulations | Done — `/simulate/` (does not write the books) |
+| New-product price | Done — `/price/` (does not write the books) |
 | Insights, AI, Render | Insights and operator guide done. CSV exports instead of an in-app AI. Render next. |
 
 ---
